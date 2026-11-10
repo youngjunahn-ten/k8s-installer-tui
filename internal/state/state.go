@@ -5,6 +5,9 @@ type AppState struct {
 	Nodes []NodeConfig
 
 	// S2: Groups (inventory.yml → ki_cp_node, k8s_node)
+	// ControlNodeIH is control_node.hosts.localhost.control_node_ih: which ki_cp node
+	// the control node is. k8s-installer stops without it (check-control-node.yml).
+	ControlNodeIH  string
 	KiCpNodes      []string
 	K8sNodes       []string
 	K8sCpNodes     []string
@@ -92,3 +95,4 @@ func (s *AppState) IsK8sNode(name string) bool       { return contains(s.K8sNode
 func (s *AppState) IsK8sCpNode(name string) bool     { return contains(s.K8sCpNodes, name) }
 func (s *AppState) IsNvidiaGPUNode(name string) bool { return contains(s.NvidiaGPUNodes, name) }
 func (s *AppState) IsAipubCpNode(name string) bool   { return contains(s.AipubCpNodes, name) }
+func (s *AppState) IsControlNode(name string) bool   { return name != "" && s.ControlNodeIH == name }

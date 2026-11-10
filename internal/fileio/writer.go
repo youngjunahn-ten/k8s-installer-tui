@@ -4,72 +4,141 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ten1010-io/k8s-installer-tui/internal/state"
 	"gopkg.in/yaml.v3"
 )
 
-// WriteInventory writes inventory.yml, backing up any existing file first.
-func WriteInventory(path string, s *state.AppState) error {
-	if err := backup(path); err != nil {
-		return err
-	}
-
-	content, err := renderInventory(s)
+// WriteInventory writes inventory.yml. An existing file is copied to a
+// timestamped backup first and keeps what the TUI does not own (see mergeInventory).
+// It returns the backup path, empty when there was no file.
+func WriteInventory(path string, s *state.AppState) (string, error) {
+	content, err := BuildInventory(path, s)
 	if err != nil {
-		return err
+		return "", err
 	}
-
-	return os.WriteFile(path, content, 0644)
+	return writeWithBackup(path, content, time.Now())
 }
 
-// WriteVars writes group_vars/all/vars.yml, backing up any existing file first.
-func WriteVars(path string, s *state.AppState) error {
-	if err := backup(path); err != nil {
-		return err
-	}
-
-	content, err := renderVars(s)
+// WriteVars writes group_vars/all/vars.yml. An existing file is copied to a
+// timestamped backup first and keeps what the TUI does not own (see mergeVars).
+// It returns the backup path, empty when there was no file.
+func WriteVars(path string, s *state.AppState) (string, error) {
+	content, err := BuildVars(path, s)
 	if err != nil {
-		return err
+		return "", err
 	}
+	return writeWithBackup(path, content, time.Now())
+}
 
-	return os.WriteFile(path, content, 0644)
+// BuildInventory returns what WriteInventory would write to path.
+func BuildInventory(path string, s *state.AppState) ([]byte, error) {
+	rendered, err := renderInventory(s)
+	if err != nil {
+		return nil, err
+	}
+	existing, err := readIfExists(path)
+	if err != nil || existing == nil {
+		return rendered, err
+	}
+	return mergeInventory(existing, rendered)
+}
+
+// BuildVars returns what WriteVars would write to path.
+func BuildVars(path string, s *state.AppState) ([]byte, error) {
+	rendered, err := renderVars(s)
+	if err != nil {
+		return nil, err
+	}
+	existing, err := readIfExists(path)
+	if err != nil || existing == nil {
+		return rendered, err
+	}
+	return mergeVars(existing, rendered)
 }
 
 // RenderInventoryString returns the inventory.yml content as a string (for preview).
-func RenderInventoryString(s *state.AppState) (string, error) {
-	b, err := renderInventory(s)
+func RenderInventoryString(path string, s *state.AppState) (string, error) {
+	b, err := BuildInventory(path, s)
 	return string(b), err
 }
 
 // RenderVarsString returns the vars.yml content as a string (for preview).
-func RenderVarsString(s *state.AppState) (string, error) {
-	b, err := renderVars(s)
+func RenderVarsString(path string, s *state.AppState) (string, error) {
+	b, err := BuildVars(path, s)
 	return string(b), err
 }
 
-func backup(path string) error {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil
+func readIfExists(path string) ([]byte, error) {
+	b, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil, nil
 	}
-	return os.Rename(path, path+".bak")
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	return b, nil
+}
+
+// writeWithBackup copies an existing file to <path>.bak.<YYYYMMDD-HHMMSS> (so a
+// second save does not overwrite the first backup), then writes content to a
+// temporary file next to path and renames it over path, so a failed write leaves
+// the old file in place.
+func writeWithBackup(path string, content []byte, now time.Time) (string, error) {
+	mode := os.FileMode(0644)
+	backupPath := ""
+	if old, err := os.ReadFile(path); err == nil {
+		if fi, err := os.Stat(path); err == nil {
+			mode = fi.Mode().Perm()
+		}
+		backupPath = path + ".bak." + now.Format("20060102-150405")
+		if err := os.WriteFile(backupPath, old, mode); err != nil {
+			return "", fmt.Errorf("backup %s: %w", path, err)
+		}
+	} else if !os.IsNotExist(err) {
+		return "", fmt.Errorf("read %s: %w", path, err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return backupPath, err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return backupPath, err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if _, err := tmp.Write(content); err != nil {
+		tmp.Close()
+		return backupPath, err
+	}
+	if err := tmp.Close(); err != nil {
+		return backupPath, err
+	}
+	if err := os.Chmod(tmpName, mode); err != nil {
+		return backupPath, err
+	}
+	return backupPath, os.Rename(tmpName, path)
 }
 
 func renderInventory(s *state.AppState) ([]byte, error) {
 	// Build using ordered yaml.Node to guarantee key order in output.
 	root := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 
-	// control_node section
+	// control_node section; control_node_ih names the ki_cp node this control node is
+	localhost := mappingNode("ansible_connection", strNode("local"))
+	if s.ControlNodeIH != "" {
+		addStr(localhost, "control_node_ih", s.ControlNodeIH)
+	}
 	root.Content = append(root.Content,
 		strNode("control_node"),
 		mappingNode(
 			"hosts", mappingNode(
-				"localhost", mappingNode(
-					"ansible_connection", strNode("local"),
-				),
+				"localhost", localhost,
 			),
 		),
 	)

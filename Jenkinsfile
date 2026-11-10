@@ -59,6 +59,12 @@ pipeline {
             }
         }
 
+        stage('Test') {
+            steps {
+                sh 'go test ./...'
+            }
+        }
+
         stage('Vet') {
             steps {
                 sh 'go vet ./...'

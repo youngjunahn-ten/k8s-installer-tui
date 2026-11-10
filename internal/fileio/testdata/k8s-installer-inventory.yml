@@ -1,0 +1,100 @@
+control_node:
+  hosts:
+    localhost:
+      ansible_connection: local
+      # Which node of the inventory this control node is. It must be a node of the
+      # ki_cp_node group, because every node of that group holds a copy of the
+      # ansible directory so that any of them can take over as the control node.
+      # Moving the control node to another one is this line and nothing else
+      control_node_ih: node1
+
+all:
+  hosts:
+    node1:
+      ansible_host: 192.168.0.1
+    node2:
+      ansible_host: 192.168.0.2
+    node3:
+      ansible_host: 192.168.0.3
+    node4:
+      ansible_host: 192.168.0.4
+
+ki_cp_node:
+  hosts:
+    node1: {}
+    node2: {}
+
+k8s_node:
+  hosts:
+    node1:
+      k8s_cp: true
+      # Kubelet reservations are calculated from the resources of the node.
+      # Override a variable here to pin it for this node only
+      #kubelet_system_reserved_cpu: "1"
+      #kubelet_system_reserved_memory: "4Gi"
+    node2:
+      k8s_cp: true
+    node3:
+      k8s_cp: true
+      # Pci devices of this node to bind to vfio-pci, so that a virtual machine
+      # can be given one. vendor:device as lspci -nn prints it, and every device
+      # of that model on the node is bound. Not only gpus: a network card or a
+      # usb controller is named the same way
+      #vfio_pci_device_ids:
+      #  - "10de:2230"
+      #  - "10de:1aef"
+      # Set this when the ids above cover every gpu of the node, so that the
+      # driver of the vendor is left with none. It says what no list of ids can:
+      # that the gpus still on the driver of a node were meant to stay there.
+      # Without it a node that lost its cards to something and a node that gave
+      # them away on purpose look the same, and they want opposite answers.
+      # setup-vfio-pci.sh refuses a node where this does not match what it finds
+      #gpu_passthrough: true
+    node4:
+      # Kernel modules this node loads and sysctls it is set to, for what the cni
+      # of this cluster asks of a node. Applied to the running node and kept
+      # across a reboot; the ones this installer sets for kubernetes are refused
+      #kernel_modules_extra:
+      #  - "openvswitch"
+      #  - "geneve"
+      #sysctl_extra:
+      #  net.ipv4.conf.all.rp_filter: 0
+      # Labels and taints to put on the node object of this node. Both are
+      # applied by talking to the apiserver, so they can be changed on a node
+      # that is already running and update-cluster.yml applies the change.
+      # Removing an entry removes it from the node; labels and taints the
+      # installer never set are left alone
+      #k8s_node_labels:
+      #  example.com/role: "gpu"
+      # A taint is applied while the node registers as well, so nothing is
+      # scheduled onto a node that is meant to be reserved before the taint is
+      # there. value may be left out
+      #k8s_node_taints:
+      #  - key: example.com/dedicated
+      #    value: "gpu"
+      #    effect: NoSchedule
+      # The device given here holds everything kubelet accounts as ephemeral
+      # storage. It gets formatted, so it has to be a disk with nothing on it
+      #ephemeral_storage_device: "/dev/disk/by-id/nvme-eui.0123456789abcdef"
+      # A node that runs virtual machines with a passed through gpu lines the
+      # vcpus, the memory and the gpu of a guest up on one numa node, and puts
+      # the guest memory on hugepages reserved at boot. The policies are per
+      # node; the hugepage count is the site's, sized from the memory each gpu
+      # is sold with. On a kernel older than 5.16 - rhel 8, ubuntu 22.04 without
+      # the hwe kernel - the count is one number, since that kernel does not
+      # read the per numa node form (hugepages=0:224,1:224)
+      #kubelet_cpu_manager_policy: "static"
+      #kubelet_topology_manager_policy: "single-numa-node"
+      #kubelet_topology_manager_scope: "pod"
+      #kubelet_memory_manager_policy: "static"
+      #kernel_cmdline_extra_args:
+      #  - "default_hugepagesz=1G"
+      #  - "hugepagesz=1G"
+      #  - "hugepages=448"
+
+# Nodes that can no longer be reached. Every playbook leaves them alone, so that
+# losing one node does not stop the installer from working on the others. A node
+# is put here while it is down and taken out once it has been rebuilt, and
+# remove-broken-node.yml is what takes it out of the cluster in the meantime
+broken_node:
+  hosts: {}

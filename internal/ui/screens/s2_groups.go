@@ -10,17 +10,18 @@ import (
 )
 
 // Focus layout:
-//   0..N-1  : table rows  (←/→: ki_cp(0) / Master(1) / GPU Worker(2))
+//   0..N-1  : table rows  (←/→: ki_cp(0) / Control(1) / Master(2) / GPU Worker(3))
 //   N       : nav slot    (←/→: 이전/다음)
 //
 // CPU Worker column is derived (read-only): node with neither Master nor GPU Worker.
 // All nodes are automatically k8s_node — that column is not shown.
 
 const (
-	colKiCp  = iota // ki_cp_node
-	colMaster       // k8s_cp → "Master Node"  (exclusive with colGPU)
-	colGPU          // nvidia_gpu → "GPU Worker" (exclusive with colMaster)
-	colCount        // number of interactive columns (CPU Worker is derived)
+	colKiCp    = iota // ki_cp_node
+	colControl        // control_node_ih → "Control" (one node, must be ki_cp)
+	colMaster         // k8s_cp → "Master Node"  (exclusive with colGPU)
+	colGPU            // nvidia_gpu → "GPU Worker" (exclusive with colMaster)
+	colCount          // number of interactive columns (CPU Worker is derived)
 )
 
 type groupRow struct {
@@ -31,7 +32,7 @@ type groupRow struct {
 type S2Groups struct {
 	rows     []groupRow
 	curRow   int
-	curCol   int // 0=ki_cp, 1=master, 2=gpu  (CPU Worker col is read-only)
+	curCol   int // 0=ki_cp, 1=control, 2=master, 3=gpu  (CPU Worker col is read-only)
 	focusNav bool
 	navIdx   int // 0=이전, 1=다음
 	width    int
@@ -52,12 +53,14 @@ func (s *S2Groups) SyncFromState(st *state.AppState) {
 		s.rows[i] = groupRow{
 			nodeName: n.Name,
 			checks: [colCount]bool{
-				colKiCp:   st.IsKiCpNode(n.Name),
-				colMaster: st.IsK8sCpNode(n.Name),
-				colGPU:    st.IsNvidiaGPUNode(n.Name),
+				colKiCp:    st.IsKiCpNode(n.Name),
+				colControl: st.IsControlNode(n.Name),
+				colMaster:  st.IsK8sCpNode(n.Name),
+				colGPU:     st.IsNvidiaGPUNode(n.Name),
 			},
 		}
 	}
+	s.ensureControl()
 	s.curRow = 0
 	s.focusNav = false
 }
@@ -71,7 +74,11 @@ func (s *S2Groups) SyncToState(st *state.AppState) {
 	st.KiCpNodes = nil
 	st.K8sCpNodes = nil
 	st.NvidiaGPUNodes = nil
+	st.ControlNodeIH = ""
 	for _, r := range s.rows {
+		if r.checks[colControl] {
+			st.ControlNodeIH = r.nodeName
+		}
 		if r.checks[colKiCp] {
 			st.KiCpNodes = append(st.KiCpNodes, r.nodeName)
 		}
@@ -132,6 +139,7 @@ func (s *S2Groups) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if len(s.rows) > 0 {
 				s.toggle(s.curRow, s.curCol)
+				s.ensureControl()
 			}
 		case "ctrl+n":
 			return s, Next()
@@ -146,6 +154,18 @@ func (s *S2Groups) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (s *S2Groups) toggle(row, col int) {
 	r := &s.rows[row]
 	switch col {
+	case colControl:
+		// One control node, and it must be a ki_cp node: choosing it checks ki_cp too.
+		for i := range s.rows {
+			s.rows[i].checks[colControl] = false
+		}
+		r.checks[colControl] = true
+		r.checks[colKiCp] = true
+	case colKiCp:
+		r.checks[colKiCp] = !r.checks[colKiCp]
+		if !r.checks[colKiCp] {
+			r.checks[colControl] = false
+		}
 	case colMaster:
 		if r.checks[colMaster] {
 			r.checks[colMaster] = false
@@ -168,11 +188,12 @@ func (s *S2Groups) toggle(row, col int) {
 func (s *S2Groups) View() string {
 	var b strings.Builder
 	b.WriteString(styles.StyleTitle.Render("그룹 할당") + "\n")
-	b.WriteString(styles.StyleMuted.Render("각 노드의 역할을 선택합니다.  ←/→: 열 이동  Space: 선택") + "\n\n")
+	b.WriteString(styles.StyleMuted.Render("각 노드의 역할을 선택합니다.  ←/→: 열 이동  Space: 선택") + "\n")
+	b.WriteString(styles.StyleMuted.Render("Control: 설치를 실행하는 노드(control_node_ih). ki_cp_node 중 하나여야 합니다") + "\n\n")
 
-	// 4 display columns: ki_cp | Master | GPU Worker | CPU Worker(derived)
-	colLabels := []string{"ki_cp_node", "Master Node", "GPU Worker", "CPU Worker"}
-	colW := []int{14, 12, 14, 12, 14}
+	// 5 display columns: ki_cp | Control | Master | GPU Worker | CPU Worker(derived)
+	colLabels := []string{"ki_cp_node", "Control", "Master Node", "GPU Worker", "CPU Worker"}
+	colW := []int{14, 12, 10, 14, 12, 14}
 
 	header := lipgloss.NewStyle().Width(colW[0]).Bold(true).Render("노드")
 	for i, l := range colLabels {
@@ -196,20 +217,17 @@ func (s *S2Groups) View() string {
 func renderGroupRow(r groupRow, colW []int, selected bool, curCol int) string {
 	isCPU := !r.checks[colMaster] && !r.checks[colGPU]
 
-	marks := [4]string{
-		styles.CheckOff(), styles.CheckOff(), styles.CheckOff(), styles.StyleMuted.Render("-"),
+	// One mark per interactive column, then the derived CPU Worker column.
+	var marks [colCount + 1]string
+	for c := 0; c < colCount; c++ {
+		marks[c] = styles.CheckOff()
+		if r.checks[c] {
+			marks[c] = styles.CheckOn()
+		}
 	}
-	if r.checks[colKiCp] {
-		marks[0] = styles.CheckOn()
-	}
-	if r.checks[colMaster] {
-		marks[1] = styles.CheckOn()
-	}
-	if r.checks[colGPU] {
-		marks[2] = styles.CheckOn()
-	}
+	marks[colCount] = styles.StyleMuted.Render("-")
 	if isCPU {
-		marks[3] = styles.CheckOn()
+		marks[colCount] = styles.CheckOn()
 	}
 
 	if selected {
@@ -217,7 +235,7 @@ func renderGroupRow(r groupRow, colW []int, selected bool, curCol int) string {
 		cs := lipgloss.NewStyle().Background(styles.AccentBg).Foreground(styles.FocusFg).Bold(true)
 
 		row := rs.Width(2).Render("▶") + rs.Width(colW[0]-2).Render(r.nodeName)
-		for i := 0; i < 4; i++ {
+		for i := 0; i < len(marks); i++ {
 			st := rs
 			if i < colCount && i == curCol {
 				st = cs
@@ -228,8 +246,28 @@ func renderGroupRow(r groupRow, colW []int, selected bool, curCol int) string {
 	}
 
 	row := "  " + lipgloss.NewStyle().Width(colW[0]-2).Render(r.nodeName)
-	for i := 0; i < 4; i++ {
+	for i := 0; i < len(marks); i++ {
 		row += lipgloss.NewStyle().Width(colW[i+1]).Align(lipgloss.Center).Render(marks[i])
 	}
 	return row
+}
+
+// ensureControl keeps exactly one control node among the ki_cp nodes: when none is
+// chosen (an inventory without control_node_ih, or its ki_cp box was cleared), the
+// first ki_cp node becomes the control node, as in the k8s-installer example.
+func (s *S2Groups) ensureControl() {
+	for _, r := range s.rows {
+		if r.checks[colControl] && r.checks[colKiCp] {
+			return
+		}
+	}
+	for i := range s.rows {
+		s.rows[i].checks[colControl] = false
+	}
+	for i := range s.rows {
+		if s.rows[i].checks[colKiCp] {
+			s.rows[i].checks[colControl] = true
+			return
+		}
+	}
 }

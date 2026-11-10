@@ -102,6 +102,11 @@ func LoadInventory(path string, s *state.AppState) error {
 	}
 	root := doc.Content[0] // DocumentNode → MappingNode
 
+	// control_node.hosts.localhost.control_node_ih
+	if ih := mappingGet(mappingGet(mappingGet(mappingGet(root, "control_node"), "hosts"), "localhost"), "control_node_ih"); ih != nil && ih.Kind == yaml.ScalarNode && ih.Tag != "!!null" {
+		s.ControlNodeIH = ih.Value
+	}
+
 	// all.hosts — iterate Content in YAML file order to preserve node sequence.
 	if hostsNode := mappingGet(mappingGet(root, "all"), "hosts"); hostsNode != nil {
 		s.Nodes = nil

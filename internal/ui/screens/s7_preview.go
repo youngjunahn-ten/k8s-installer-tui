@@ -30,6 +30,7 @@ type S7Preview struct {
 	errors           []validator.Error
 	saved            bool
 	saveErr          string
+	backups          []string // backup files written by the last save
 	appState         *state.AppState
 	inventoryPath    string
 	varsPath         string
@@ -66,14 +67,14 @@ func (s *S7Preview) SyncFromState(st *state.AppState) {
 	s.saved = false
 	s.saveErr = ""
 
-	inv, err := fileio.RenderInventoryString(st)
+	inv, err := fileio.RenderInventoryString(s.inventoryPath, st)
 	if err != nil {
 		s.inventoryContent = fmt.Sprintf("렌더링 오류: %v", err)
 	} else {
 		s.inventoryContent = inv
 	}
 
-	vars, err := fileio.RenderVarsString(st)
+	vars, err := fileio.RenderVarsString(s.varsPath, st)
 	if err != nil {
 		s.varsContent = fmt.Sprintf("렌더링 오류: %v", err)
 	} else {
@@ -174,13 +175,22 @@ func (s *S7Preview) doSave() (tea.Model, tea.Cmd) {
 		s.saveErr = "검증 오류가 있어 저장할 수 없습니다"
 		return s, nil
 	}
-	if err := fileio.WriteInventory(s.inventoryPath, s.appState); err != nil {
+	s.backups = nil
+	invBak, err := fileio.WriteInventory(s.inventoryPath, s.appState)
+	if err != nil {
 		s.saveErr = fmt.Sprintf("inventory.yml 저장 실패: %v", err)
 		return s, nil
 	}
-	if err := fileio.WriteVars(s.varsPath, s.appState); err != nil {
+	if invBak != "" {
+		s.backups = append(s.backups, invBak)
+	}
+	varsBak, err := fileio.WriteVars(s.varsPath, s.appState)
+	if err != nil {
 		s.saveErr = fmt.Sprintf("vars.yml 저장 실패: %v", err)
 		return s, nil
+	}
+	if varsBak != "" {
+		s.backups = append(s.backups, varsBak)
 	}
 	s.saved = true
 	s.saveErr = ""
@@ -261,7 +271,10 @@ func (s *S7Preview) View() string {
 	if s.saved {
 		b.WriteString("\n" + styles.StyleSuccess.Render("✓ 저장 완료!") + "\n")
 		b.WriteString(styles.StyleMuted.Render(fmt.Sprintf("  %s\n  %s", s.inventoryPath, s.varsPath)) + "\n")
-		b.WriteString(styles.StyleMuted.Render("  기존 파일은 .bak으로 백업되었습니다") + "\n")
+		if len(s.backups) > 0 {
+			b.WriteString(styles.StyleMuted.Render("  기존 파일 백업: "+strings.Join(s.backups, ", ")) + "\n")
+			b.WriteString(styles.StyleMuted.Render("  TUI가 다루지 않는 키와 주석은 그대로 두었습니다") + "\n")
+		}
 		b.WriteString("\n" + styles.StyleTitle.Render("종료하시겠습니까?") + "  " +
 			styles.StyleMuted.Render("Enter 확인") + "\n")
 	}

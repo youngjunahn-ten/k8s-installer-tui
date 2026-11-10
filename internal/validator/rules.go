@@ -84,6 +84,15 @@ func validateGroups(s *state.AppState) []Error {
 	if len(s.K8sNodes) == 0 {
 		errs = append(errs, Error{"k8s_node", "k8s_node 그룹에 최소 1개 이상의 노드가 필요합니다"})
 	}
+	// k8s-installer (check-control-node.yml) stops when control_node_ih is unset or
+	// names a node outside ki_cp_node: every ki_cp node holds the ansible directory.
+	if len(s.KiCpNodes) == 0 {
+		errs = append(errs, Error{"ki_cp_node", "ki_cp_node 그룹에 최소 1개 이상의 노드가 필요합니다"})
+	} else if s.ControlNodeIH == "" {
+		errs = append(errs, Error{"control_node_ih", "Control 노드를 하나 선택해주세요"})
+	} else if !s.IsKiCpNode(s.ControlNodeIH) {
+		errs = append(errs, Error{"control_node_ih", fmt.Sprintf("Control 노드 '%s'는 ki_cp_node여야 합니다", s.ControlNodeIH)})
+	}
 	return errs
 }
 

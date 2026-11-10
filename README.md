@@ -84,12 +84,18 @@ make clean
 ### 기존 파일이 있는 경우
 
 기존 `inventory.yml`과 `vars.yml`이 있으면 자동으로 읽어 편집 모드로 시작합니다.  
-저장 시 기존 파일은 `.bak`으로 백업됩니다.
+저장 시 기존 파일은 저장 시각을 붙인 이름으로 복사해 두므로, 여러 번 저장해도 이전 백업이 덮이지 않습니다.
 
 ```
-inventory.yml      →  inventory.yml.bak  (백업)
-inventory.yml      ←  새 내용으로 저장
+inventory.yml      →  inventory.yml.bak.20261110-153000  (백업, 복사)
+inventory.yml      ←  새 내용으로 저장 (임시 파일에 쓴 뒤 바꿔치기)
 ```
+
+저장은 TUI가 다루는 값만 바꿉니다. TUI 화면에 없는 키(`kubelet_*`, `sysctl_extra` 등),
+호스트별 다른 변수, 다른 그룹(`broken_node` 등)과 주석은 그대로 남습니다.
+
+- `vars.yml`: TUI가 다루는 최상위 키의 줄만 바꾸고 나머지 줄은 한 글자도 바꾸지 않습니다. 파일에 없던 키는 끝에 붙입니다.
+- `inventory.yml`: 내용과 주석은 남지만, YAML 라이브러리 특성상 빈 줄이 빠지고 일부 주석의 들여쓰기가 바뀔 수 있습니다.
 
 ## 키 조작
 
@@ -130,6 +136,7 @@ inventory.yml      ←  새 내용으로 저장
 | 열 | 설명 |
 |----|------|
 | `ki_cp_node` | KI Control Plane 노드 (DNS, NTP, 레지스트리 등) |
+| `Control` | 설치를 실행하는 노드 → `control_node.hosts.localhost.control_node_ih`. 하나만 고르며 `ki_cp_node`여야 합니다(고르면 `ki_cp_node`도 함께 체크). 비어 있으면 첫 `ki_cp_node`로 정해집니다. k8s-installer는 이 값이 없으면 시작하지 않습니다(`check-control-node.yml`) |
 | `k8s_node` | Kubernetes 클러스터 노드 |
 | `k8s_cp` | Kubernetes Control Plane 노드 (`k8s_node` 필수) |
 | `nvidia_gpu` | GPU 노드 (`k8s_node` 필수) |
@@ -202,7 +209,9 @@ k8s-installer-tui/
     │   └── state.go                 # AppState, DefaultState()
     ├── fileio/
     │   ├── loader.go                # YAML 파일 → AppState
-    │   └── writer.go                # AppState → YAML + .bak 백업
+    │   ├── writer.go                # AppState → YAML, 시각 붙인 백업, 안전한 쓰기
+    │   ├── merge.go                 # 기존 파일에 TUI 값만 반영 (나머지 키·주석 보존)
+    │   └── merge_test.go            # testdata/: k8s-installer main의 inventory·vars 예시
     ├── validator/
     │   └── rules.go                 # R1~R6 검증
     └── ui/
