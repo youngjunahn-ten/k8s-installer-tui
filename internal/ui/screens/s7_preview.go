@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/ten1010-io/k8s-installer-tui/internal/fileio"
+	"github.com/ten1010-io/k8s-installer-tui/internal/preflight"
 	"github.com/ten1010-io/k8s-installer-tui/internal/state"
 	"github.com/ten1010-io/k8s-installer-tui/internal/ui/styles"
 	"github.com/ten1010-io/k8s-installer-tui/internal/validator"
@@ -30,8 +31,11 @@ type S7Preview struct {
 	errors           []validator.Error
 	saved            bool
 	saveErr          string
-	backups          []string // backup files written by the last save
-	notSaved         []string // keys the existing vars.yml does not have (fileio.VarsNotSaved)
+	backups          []string          // backup files written by the last save
+	notSaved         []string          // keys the existing vars.yml does not have (fileio.VarsNotSaved)
+	pfRunning        bool              // the preflight playbook is running
+	pfReport         *preflight.Report // what it last came back with
+	pfErr            string            // or why it could not be run
 	appState         *state.AppState
 	inventoryPath    string
 	varsPath         string
@@ -105,10 +109,99 @@ func (s *S7Preview) Validate() []string {
 
 func (s *S7Preview) Init() tea.Cmd { return nil }
 
+// PreflightDoneMsg is what the preflight playbook came back with.
+type PreflightDoneMsg struct {
+	Report *preflight.Report
+	Err    error
+}
+
+// tabCount is two files, and the preflight result once there is one to show.
+func (s *S7Preview) tabCount() int {
+	if s.pfRunning || s.pfReport != nil || s.pfErr != "" {
+		return 3
+	}
+	return 2
+}
+
+// startPreflight runs playbooks/preflight.yml of the installer beside the
+// inventory. It reads the files on disk, so what it checks is what was saved.
+func (s *S7Preview) startPreflight() (tea.Model, tea.Cmd) {
+	if s.pfRunning || !preflight.Available(s.inventoryPath) {
+		return s, nil
+	}
+	ansible, err := preflight.FindAnsible(s.inventoryPath, s.appState.AnsiblePlaybook)
+	if err != nil {
+		s.pfReport, s.pfErr = nil, err.Error()
+		s.activeTab = 2
+		s.refreshViewport()
+		return s, nil
+	}
+	s.pfRunning, s.pfReport, s.pfErr = true, nil, ""
+	s.activeTab = 2
+	s.refreshViewport()
+	inventoryPath := s.inventoryPath
+	return s, func() tea.Msg {
+		report, err := preflight.Run(inventoryPath, ansible)
+		return PreflightDoneMsg{Report: report, Err: err}
+	}
+}
+
+// preflightContent is the third tab: the rows of the report, the ones that need
+// attention first, each with what the installer says to do about it.
+func (s *S7Preview) preflightContent() string {
+	w := s.width
+	switch {
+	case s.pfRunning:
+		return strings.Join(wrapLines("점검 중입니다… 모든 노드에 접속해 확인합니다. 아무것도 바꾸지 않습니다.", w), "\n")
+	case s.pfErr != "":
+		return strings.Join(wrapLines("✗ 점검을 실행하지 못했습니다\n"+s.pfErr, w), "\n")
+	case s.pfReport == nil:
+		return ""
+	}
+	r := s.pfReport
+	var lines []string
+	head := fmt.Sprintf("실패 %d · 확인 필요 %d · 통과 %d · 건너뜀 %d   (저장된 파일 기준)",
+		r.Count("fail"), r.Count("warn"), r.Count("ok"), r.Count("skip"))
+	lines = append(lines, wrapLines(head, w)...)
+	lines = append(lines, "")
+	marks := map[string]string{"fail": "✗", "warn": "!", "ok": "✓", "skip": "-"}
+	for _, status := range []string{"fail", "warn", "ok", "skip"} {
+		for _, row := range r.Rows {
+			if row.Status != status {
+				continue
+			}
+			text := fmt.Sprintf("%s %s · %s", marks[status], row.Node, preflight.Label(row.Check))
+			if row.Detail != "" && (status == "ok" || status == "skip") {
+				text += "  " + strings.SplitN(row.Detail, "\n", 2)[0]
+			}
+			lines = append(lines, wrapLines(text, w)...)
+			if status == "fail" || status == "warn" {
+				for _, l := range wrapLines(row.Detail, w-4) {
+					lines = append(lines, "    "+l)
+				}
+				for _, l := range wrapLines("→ "+row.Fix, w-4) {
+					lines = append(lines, "    "+l)
+				}
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
 func (s *S7Preview) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case PreflightDoneMsg:
+		s.pfRunning, s.pfReport, s.pfErr = false, msg.Report, ""
+		if msg.Err != nil {
+			s.pfErr = msg.Err.Error()
+		}
+		s.activeTab = 2
+		s.refreshViewport()
+		return s, nil
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "c":
+			return s.startPreflight()
 		case "up", "k":
 			if s.focusIdx == s7FocusContent {
 				s.vp.LineUp(1)
@@ -140,7 +233,7 @@ func (s *S7Preview) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "right", "l":
 			switch s.focusIdx {
 			case s7FocusContent:
-				if s.activeTab < 1 {
+				if s.activeTab < s.tabCount()-1 {
 					s.activeTab++
 					s.refreshViewport()
 				}
@@ -200,10 +293,13 @@ func (s *S7Preview) doSave() (tea.Model, tea.Cmd) {
 }
 
 func (s *S7Preview) refreshViewport() {
-	if s.activeTab == 0 {
+	switch s.activeTab {
+	case 0:
 		s.vp.SetContent(s.inventoryContent)
-	} else {
+	case 1:
 		s.vp.SetContent(s.varsContent)
+	default:
+		s.vp.SetContent(s.preflightContent())
 	}
 	s.vp.GotoTop()
 }
@@ -238,25 +334,25 @@ func (s *S7Preview) View() string {
 
 	// Tabs — ←/→ 전환, 콘텐츠 포커스 시 활성 탭 표시
 	contentFocused := s.focusIdx == s7FocusContent
-	var tab0, tab1 string
-	if s.activeTab == 0 {
-		tab0 = styles.StylePrimary.Render("[ inventory.yml ]")
-		if contentFocused {
-			tab1 = styles.StyleMuted.Render("  vars.yml  ") + styles.StyleMuted.Render(" →")
+	names := []string{"inventory.yml", "vars.yml", "사전 점검"}[:s.tabCount()]
+	tabs := ""
+	for i, name := range names {
+		if i == s.activeTab {
+			tabs += styles.StylePrimary.Render("[ " + name + " ]")
 		} else {
-			tab1 = styles.StyleMuted.Render("  vars.yml  ")
+			tabs += styles.StyleMuted.Render("  " + name + "  ")
 		}
-	} else {
-		if contentFocused {
-			tab0 = styles.StyleMuted.Render("←  inventory.yml  ")
-		} else {
-			tab0 = styles.StyleMuted.Render("  inventory.yml  ")
-		}
-		tab1 = styles.StylePrimary.Render("[ vars.yml ]")
 	}
-	b.WriteString(tab0 + "  " + tab1 + "\n")
+	if contentFocused {
+		tabs += styles.StyleMuted.Render("  ←/→")
+	}
+	b.WriteString(tabs + "\n")
 
 	b.WriteString(s.scrollBar() + "\n")
+
+	if preflight.Available(s.inventoryPath) {
+		b.WriteString(styles.StyleMuted.Render(fit("c: 사전 점검 — 노드 접속·sudo·OS·디스크·변수를 한 번에 확인 (바꾸는 것 없음)", s.width)) + "\n")
+	}
 
 	if len(s.errors) == 0 {
 		b.WriteString(styles.StyleSuccess.Render("✓ 검증 통과 — 저장 가능합니다") + "\n")

@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 	"github.com/ten1010-io/k8s-installer-tui/internal/state"
 	"github.com/ten1010-io/k8s-installer-tui/internal/ui/styles"
 )
@@ -105,4 +106,41 @@ func RenderSectionHeader(label string, focused bool) string {
 			Render("▶ " + label)
 	}
 	return styles.StyleLabel.Render("  " + label)
+}
+
+// wrapLines breaks text into lines of at most w columns, at spaces where it
+// can and inside a word where one is longer than a line. Newlines are kept.
+func wrapLines(text string, w int) []string {
+	if w < 1 {
+		w = 1
+	}
+	var out []string
+	for _, paragraph := range strings.Split(text, "\n") {
+		line := ""
+		for _, word := range strings.Fields(paragraph) {
+			for runewidth.StringWidth(word) > w {
+				if line != "" {
+					out = append(out, line)
+					line = ""
+				}
+				head := runewidth.Truncate(word, w, "")
+				if head == "" {
+					break
+				}
+				out = append(out, head)
+				word = word[len(head):]
+			}
+			if line != "" && runewidth.StringWidth(line)+1+runewidth.StringWidth(word) > w {
+				out = append(out, line)
+				line = ""
+			}
+			if line == "" {
+				line = word
+			} else {
+				line += " " + word
+			}
+		}
+		out = append(out, line)
+	}
+	return out
 }

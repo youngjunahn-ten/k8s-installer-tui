@@ -26,6 +26,7 @@ func main() {
 	inventoryPath := flag.String("inventory", "inventory.yml", "inventory.yml 경로")
 	varsPath := flag.String("vars", "group_vars/all/vars.yml", "vars.yml 경로")
 	schemaPath := flag.String("schema", "", "vars 스키마 경로 (기본: inventory.yml 옆의 schema/vars.schema.json)")
+	ansiblePath := flag.String("ansible-playbook", "", "사전 점검에 쓸 ansible-playbook 경로 (기본: PATH, 없으면 ../venv/bin)")
 	showVersion := flag.Bool("version", false, "버전 출력")
 	flag.Parse()
 
@@ -48,6 +49,7 @@ func main() {
 
 	// Start from defaults, then overlay existing files
 	s := state.DefaultState()
+	s.AnsiblePlaybook = *ansiblePath
 
 	if err := fileio.LoadInventory(invAbs, s); err != nil {
 		fmt.Fprintf(os.Stderr, "inventory.yml 로드 오류: %v\n", err)

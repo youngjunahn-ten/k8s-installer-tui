@@ -1,0 +1,124 @@
+{
+  "ok": false,
+  "rows": [
+    {
+      "node": "vars",
+      "check": "variables",
+      "status": "ok",
+      "detail": "vars.yml and inventory.yml are accepted",
+      "fix": ""
+    },
+    {
+      "node": "localhost",
+      "check": "control_node",
+      "status": "ok",
+      "detail": "node[\"node1\"] (cp1.example.com)",
+      "fix": ""
+    },
+    {
+      "node": "node1",
+      "check": "reachable",
+      "status": "ok",
+      "detail": "cp1.example.com",
+      "fix": ""
+    },
+    {
+      "node": "node1",
+      "check": "sudo",
+      "status": "ok",
+      "detail": "",
+      "fix": ""
+    },
+    {
+      "node": "node1",
+      "check": "sudo_shell",
+      "status": "ok",
+      "detail": "",
+      "fix": ""
+    },
+    {
+      "node": "node1",
+      "check": "os",
+      "status": "ok",
+      "detail": "ubuntu24.04 x86_64",
+      "fix": ""
+    },
+    {
+      "node": "node1",
+      "check": "package_manager",
+      "status": "ok",
+      "detail": "",
+      "fix": ""
+    },
+    {
+      "node": "node1",
+      "check": "disk",
+      "status": "ok",
+      "detail": "/var/lib/k8s-installer: 146Gi free (76%)",
+      "fix": ""
+    },
+    {
+      "node": "node1",
+      "check": "disk",
+      "status": "ok",
+      "detail": "/var/lib/docker: 146Gi free (76%)",
+      "fix": ""
+    },
+    {
+      "node": "node2",
+      "check": "reachable",
+      "status": "ok",
+      "detail": "worker1.example.com",
+      "fix": ""
+    },
+    {
+      "node": "node2",
+      "check": "sudo",
+      "status": "ok",
+      "detail": "",
+      "fix": ""
+    },
+    {
+      "node": "node2",
+      "check": "sudo_shell",
+      "status": "ok",
+      "detail": "",
+      "fix": ""
+    },
+    {
+      "node": "node2",
+      "check": "os",
+      "status": "ok",
+      "detail": "ubuntu24.04 x86_64",
+      "fix": ""
+    },
+    {
+      "node": "node2",
+      "check": "package_manager",
+      "status": "ok",
+      "detail": "",
+      "fix": ""
+    },
+    {
+      "node": "node2",
+      "check": "disk",
+      "status": "ok",
+      "detail": "/var/lib/k8s-installer: 178Gi free (92%)",
+      "fix": ""
+    },
+    {
+      "node": "node2",
+      "check": "disk",
+      "status": "ok",
+      "detail": "/var/lib/docker: 178Gi free (92%)",
+      "fix": ""
+    },
+    {
+      "node": "node3",
+      "check": "reachable",
+      "status": "fail",
+      "detail": "Task failed: Failed to connect to the host via ssh: ssh: connect to host 192.0.2.250 port 22: No route to host",
+      "fix": "Check ansible_host and ansible_port of the node in inventory.yml, and that configure-control-node-ssh.sh was run and its key added to the node"
+    }
+  ]
+}

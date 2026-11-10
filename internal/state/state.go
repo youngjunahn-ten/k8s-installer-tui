@@ -53,6 +53,10 @@ type AppState struct {
 	VarsOrder  []string               // the variables, in the order of the schema
 	VarsValues map[string]interface{} // value of each: from vars.yml, else its shipped default
 	VarsEdited map[string]bool        // the ones changed here, which a save writes
+
+	// AnsiblePlaybook is the ansible-playbook the preflight check is run with;
+	// empty finds one (PATH, then the virtual environment of the installer).
+	AnsiblePlaybook string
 }
 
 func DefaultState() *AppState {
