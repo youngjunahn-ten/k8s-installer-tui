@@ -151,7 +151,8 @@ func mergeVars(existing, rendered []byte) ([]byte, error) {
 // control_node_ih, the hosts of all / ki_cp_node / k8s_node with the keys the TUI
 // sets on them (ansible_host, ansible_port, ansible_ssh_user, k8s_cp, nvidia_gpu).
 // Other host variables, other groups (broken_node, ...) and comments are kept.
-// A host the TUI no longer lists is removed from these three groups.
+// A host the TUI no longer lists is removed from these three groups, and a node
+// deleted in the TUI from every group.
 func mergeInventory(existing, rendered []byte) ([]byte, error) {
 	var edoc yaml.Node
 	if err := yaml.Unmarshal(existing, &edoc); err != nil {
@@ -175,6 +176,31 @@ func mergeInventory(existing, rendered []byte) ([]byte, error) {
 		mappingSet(local, "control_node_ih", ih)
 	} else {
 		mappingDelete(local, "control_node_ih")
+	}
+
+	// A node deleted in the TUI (in all.hosts before, not now) is also dropped from
+	// every other group (broken_node, a site's own group): left there, ansible would
+	// make it a host with no ansible_host.
+	keep := map[string]bool{}
+	if fAll := mappingGet(mappingGet(froot, "all"), "hosts"); fAll != nil {
+		for i := 0; i+1 < len(fAll.Content); i += 2 {
+			keep[fAll.Content[i].Value] = true
+		}
+	}
+	var deleted []string
+	if eAll := mappingGet(mappingGet(eroot, "all"), "hosts"); eAll != nil && eAll.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(eAll.Content); i += 2 {
+			if name := eAll.Content[i].Value; !keep[name] {
+				deleted = append(deleted, name)
+			}
+		}
+	}
+	for i := 0; i+1 < len(eroot.Content); i += 2 {
+		if hosts := mappingGet(eroot.Content[i+1], "hosts"); hosts != nil {
+			for _, name := range deleted {
+				mappingDelete(hosts, name)
+			}
+		}
 	}
 
 	groups := []struct {
