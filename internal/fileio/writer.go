@@ -62,6 +62,9 @@ func VarsNotSaved(path string, s *state.AppState) []string {
 }
 
 func buildVars(path string, s *state.AppState) ([]byte, []string, error) {
+	if s.SchemaMode {
+		return buildSchemaVars(path, s)
+	}
 	rendered, err := renderVars(s)
 	if err != nil {
 		return nil, nil, err
@@ -70,7 +73,7 @@ func buildVars(path string, s *state.AppState) ([]byte, []string, error) {
 	if err != nil || existing == nil {
 		return rendered, nil, err
 	}
-	return mergeVars(existing, rendered)
+	return mergeVars(existing, rendered, ownedVarKeys, false)
 }
 
 // RenderInventoryString returns the inventory.yml content as a string (for preview).

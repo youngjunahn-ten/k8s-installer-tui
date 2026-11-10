@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ten1010-io/k8s-installer-tui/internal/schema"
 	"github.com/ten1010-io/k8s-installer-tui/internal/state"
 	"github.com/ten1010-io/k8s-installer-tui/internal/ui/screens"
 	"github.com/ten1010-io/k8s-installer-tui/internal/ui/styles"
@@ -20,6 +21,29 @@ type App struct {
 	inventoryPath string
 	varsPath      string
 	version       string
+	stepTitles    []string
+	schemaMode    bool
+}
+
+// NewSchemaApp is the wizard for an installer that says what its vars.yml
+// accepts (ansible/schema/vars.schema.json): nodes, groups, one screen drawn
+// from that schema, and the preview. The state must have been filled from the
+// same schema (schema.Fill).
+func NewSchemaApp(s *state.AppState, inventoryPath, varsPath, version string, sch *schema.Schema) *App {
+	s1 := screens.NewS1Nodes()
+	s1.SyncFromState(s)
+	return &App{
+		appState: s,
+		screenList: []screens.Screen{
+			s1, screens.NewS2Groups(), screens.NewSVars(sch),
+			screens.NewS7Preview(s, inventoryPath, varsPath),
+		},
+		stepTitles:    []string{"1.노드", "2.그룹", "3.설정", "4.저장"},
+		schemaMode:    true,
+		inventoryPath: inventoryPath,
+		varsPath:      varsPath,
+		version:       version,
+	}
 }
 
 func NewApp(s *state.AppState, inventoryPath, varsPath, version string) *App {
@@ -34,6 +58,7 @@ func NewApp(s *state.AppState, inventoryPath, varsPath, version string) *App {
 	return &App{
 		appState:      s,
 		screenList:    []screens.Screen{s1, s2, s3, s4, s5, s6, s7},
+		stepTitles:    []string{"1.노드", "2.그룹", "3.네트워크", "4.K8s", "5.AIPub", "6.인증서", "7.저장"},
 		inventoryPath: inventoryPath,
 		varsPath:      varsPath,
 		version:       version,
@@ -82,7 +107,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // skipScreen returns true for screens that should be skipped in navigation.
 // S6 (index 5, 인증서) is skipped when AIPub is not being installed.
 func (a *App) skipScreen(idx int) bool {
-	return idx == 5 && !a.appState.AipubEnabled
+	return !a.schemaMode && idx == 5 && !a.appState.AipubEnabled
 }
 
 func (a *App) goNext() (tea.Model, tea.Cmd) {
@@ -196,9 +221,8 @@ func (a *App) View() string {
 func (a *App) renderHeader(width int) string {
 	title := styles.StyleHeader.Width(width).Render("  k8s-installer-tui " + a.version + "  ")
 
-	stepTitles := []string{"1.노드", "2.그룹", "3.네트워크", "4.K8s", "5.AIPub", "6.인증서", "7.저장"}
 	parts := make([]string, len(a.screenList))
-	for i, t := range stepTitles {
+	for i, t := range a.stepTitles {
 		switch {
 		case a.skipScreen(i):
 			parts[i] = styles.StyleMuted.Render("(" + t + ")")

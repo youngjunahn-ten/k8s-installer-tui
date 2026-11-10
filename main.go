@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/ten1010-io/k8s-installer-tui/internal/fileio"
+	"github.com/ten1010-io/k8s-installer-tui/internal/schema"
 	"github.com/ten1010-io/k8s-installer-tui/internal/state"
 	"github.com/ten1010-io/k8s-installer-tui/internal/ui"
 )
@@ -24,6 +25,7 @@ func main() {
 	}
 	inventoryPath := flag.String("inventory", "inventory.yml", "inventory.yml 경로")
 	varsPath := flag.String("vars", "group_vars/all/vars.yml", "vars.yml 경로")
+	schemaPath := flag.String("schema", "", "vars 스키마 경로 (기본: inventory.yml 옆의 schema/vars.schema.json)")
 	showVersion := flag.Bool("version", false, "버전 출력")
 	flag.Parse()
 
@@ -56,7 +58,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	app := ui.NewApp(s, invAbs, varsAbs, version)
+	// An installer that says what its vars.yml accepts ships the schema beside
+	// inventory.yml. With it the vars screen is drawn from the schema, so it
+	// matches that installer; without it the screens are the ones written for
+	// the installer before the split.
+	schemaFile := *schemaPath
+	if schemaFile == "" {
+		schemaFile = filepath.Join(filepath.Dir(invAbs), "schema", "vars.schema.json")
+	}
+	var app *ui.App
+	if _, err := os.Stat(schemaFile); err == nil {
+		sch, err := schema.Load(schemaFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "스키마 로드 오류 (%s): %v\n", schemaFile, err)
+			os.Exit(1)
+		}
+		values, err := fileio.LoadVarsValues(varsAbs)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "vars.yml 로드 오류: %v\n", err)
+			os.Exit(1)
+		}
+		sch.Fill(s, values)
+		app = ui.NewSchemaApp(s, invAbs, varsAbs, version, sch)
+	} else if *schemaPath != "" {
+		fmt.Fprintf(os.Stderr, "스키마 파일이 없습니다: %s\n", schemaFile)
+		os.Exit(1)
+	} else {
+		app = ui.NewApp(s, invAbs, varsAbs, version)
+	}
 	p := tea.NewProgram(app, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "오류: %v\n", err)

@@ -143,14 +143,14 @@ func Parse(data []byte) (*Schema, error) {
 		f := Field{
 			Name:        name,
 			Required:    required[name],
-			Default:     p.Default,
+			Default:     wholeNumbers(p.Default),
 			Description: p.Description,
 			Class:       p.Class,
 			ClusterWide: p.ClusterWide,
 		}
 		if len(p.Examples) > 0 {
 			f.Commented = true
-			f.Example = p.Examples[0]
+			f.Example = wholeNumbers(p.Examples[0])
 		}
 		if err := classify(&f, p); err != nil {
 			return nil, fmt.Errorf("property %q: %w", name, err)
@@ -211,6 +211,8 @@ func classify(f *Field, p rawProp) error {
 			f.Kind = KindObject
 		} else {
 			f.Kind = KindList
+			// What each item has to be, when the schema says
+			f.Format, f.Pattern = item.Format, item.Pattern
 		}
 	default:
 		f.Kind = KindObject

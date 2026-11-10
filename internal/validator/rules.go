@@ -30,6 +30,11 @@ func Validate(s *state.AppState) []Error {
 	var errs []Error
 	errs = append(errs, validateNodes(s)...)
 	errs = append(errs, validateGroups(s)...)
+	if s.SchemaMode {
+		// What a variable accepts is checked as it is typed, from the schema, and
+		// what they have to add up to is the validator of the installer to say
+		return errs
+	}
 	errs = append(errs, validateNetwork(s)...)
 	errs = append(errs, validateKubernetes(s)...)
 	errs = append(errs, validateAipub(s)...)

@@ -46,6 +46,13 @@ type AppState struct {
 
 	// S6: Certificate mode (vars.yml)
 	KiCertMode string
+
+	// Schema mode: the installer beside the TUI says which variables vars.yml has
+	// (ansible/schema/vars.schema.json). Screens 3-6 above are not used then.
+	SchemaMode bool
+	VarsOrder  []string               // the variables, in the order of the schema
+	VarsValues map[string]interface{} // value of each: from vars.yml, else its shipped default
+	VarsEdited map[string]bool        // the ones changed here, which a save writes
 }
 
 func DefaultState() *AppState {

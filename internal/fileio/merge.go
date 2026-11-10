@@ -98,7 +98,11 @@ func parseMapping(b []byte) (*yaml.Node, error) {
 // exception is a key the file carries commented out ("#key: ..." in column 0,
 // as main ships internal_network_extra_zone): that placeholder is replaced in
 // place. The keys left out are returned so the screen can say so.
-func mergeVars(existing, rendered []byte) ([]byte, []string, error) {
+//
+// ownedKeys are the keys this save speaks for. With appendMissing a rendered
+// key the file lacks is added at the end instead of left out: that is for a
+// save driven by the schema of the installer, which knows the key is one it has.
+func mergeVars(existing, rendered []byte, ownedKeys []string, appendMissing bool) ([]byte, []string, error) {
 	eroot, err := parseMapping(existing)
 	if err != nil {
 		return nil, nil, fmt.Errorf("parse existing vars.yml: %w", err)
@@ -117,7 +121,7 @@ func mergeVars(existing, rendered []byte) ([]byte, []string, error) {
 	fspans, forder := topLevelSpans(flines, froot)
 
 	owned := map[string]bool{}
-	for _, k := range ownedVarKeys {
+	for _, k := range ownedKeys {
 		owned[k] = true
 	}
 	for _, k := range forder {
@@ -161,11 +165,26 @@ func mergeVars(existing, rendered []byte) ([]byte, []string, error) {
 		skipped = append(skipped, key)
 	}
 
+	var added []string
+	if appendMissing {
+		for _, key := range skipped {
+			fsp := fspans[key]
+			added = append(added, flines[fsp.start:fsp.end+1]...)
+		}
+		skipped = nil
+	}
+
 	sort.Slice(edits, func(i, j int) bool { return edits[i].start > edits[j].start })
 	out := append([]string(nil), elines...)
 	for _, e := range edits {
 		tail := append(append([]string(nil), e.lines...), out[e.end+1:]...)
 		out = append(out[:e.start], tail...)
+	}
+	if len(added) > 0 {
+		if len(out) > 0 && strings.TrimSpace(out[len(out)-1]) != "" {
+			out = append(out, "")
+		}
+		out = append(out, added...)
 	}
 	return []byte(strings.Join(out, "\n") + "\n"), skipped, nil
 }
