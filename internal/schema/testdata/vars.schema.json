@@ -1,0 +1,874 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Written by tools/export-vars-schema.py from validate-hostvars.py, vars.yml and ki_var_classes. Edit those and run it again",
+  "title": "group_vars/all/vars.yml of k8s-installer",
+  "type": "object",
+  "x-ki-order": [
+    "ansible_user",
+    "ki_var_root_path",
+    "docker_root_path",
+    "ephemeral_storage_device",
+    "kernel_cmdline_extra_args",
+    "kernel_modules_extra",
+    "sysctl_extra",
+    "internal_network_subnets",
+    "internal_network_extra_zone",
+    "internal_network_extra_zone_a_records",
+    "ki_cp_ha_mode",
+    "ki_cp_ha_mode_vip",
+    "ki_cp_ha_mode_vip_carrier",
+    "ki_cp_service_timezone",
+    "ki_cp_dns_dnssec_validation",
+    "ki_cp_dns_server_upstream_servers",
+    "ki_cp_ntp_server_upstream_servers",
+    "ki_cp_ntp_server_local_fallback",
+    "k8s_pod_subnet",
+    "k8s_service_subnet",
+    "k8s_kube_proxy_enabled",
+    "k8s_minor_version",
+    "k8s_apiserver_extra_args",
+    "k8s_apiserver_extra_volumes",
+    "k8s_controller_manager_extra_args",
+    "k8s_controller_manager_extra_volumes",
+    "k8s_scheduler_extra_args",
+    "k8s_scheduler_extra_volumes",
+    "k8s_etcd_extra_args",
+    "k8s_cp_extra_files",
+    "k8s_certificate_validity_period",
+    "ki_preflight_disk_free_min",
+    "ki_preflight_disk_free_percent_min",
+    "ki_preflight_clock_offset_max_seconds",
+    "ki_etcd_backup_retention_count",
+    "kubelet_system_reserved_cpu",
+    "kubelet_system_reserved_memory",
+    "kubelet_system_reserved_ephemeral_storage",
+    "kubelet_system_reserved_pid",
+    "kubelet_kube_reserved_cpu",
+    "kubelet_kube_reserved_memory",
+    "kubelet_kube_reserved_ephemeral_storage",
+    "kubelet_kube_reserved_pid",
+    "kubelet_eviction_hard_memory_available",
+    "kubelet_eviction_hard_nodefs_available",
+    "kubelet_eviction_hard_imagefs_available",
+    "kubelet_eviction_hard_nodefs_inodes_free",
+    "kubelet_auto_memory_available_min",
+    "kubelet_auto_memory_available_max",
+    "kubelet_auto_nodefs_available_min",
+    "kubelet_auto_nodefs_available_max",
+    "kubelet_auto_ephemeral_storage_min",
+    "kubelet_auto_ephemeral_storage_max",
+    "kubelet_cpu_manager_policy",
+    "kubelet_cpu_manager_full_pcpus_only",
+    "kubelet_topology_manager_policy",
+    "kubelet_topology_manager_scope",
+    "kubelet_memory_manager_policy",
+    "kubelet_reserved_system_cpus",
+    "kubelet_server_tls_bootstrap",
+    "kubelet_max_pods",
+    "kubelet_ki_cp_extra_cpu",
+    "kubelet_ki_cp_extra_memory"
+  ],
+  "required": [
+    "ki_var_root_path",
+    "docker_root_path",
+    "kernel_cmdline_extra_args",
+    "kernel_modules_extra",
+    "sysctl_extra",
+    "internal_network_subnets",
+    "ki_cp_ha_mode",
+    "ki_cp_dns_dnssec_validation",
+    "ki_cp_dns_server_upstream_servers",
+    "ki_cp_ntp_server_upstream_servers",
+    "ki_cp_ntp_server_local_fallback",
+    "k8s_pod_subnet",
+    "k8s_service_subnet",
+    "k8s_kube_proxy_enabled",
+    "k8s_minor_version",
+    "k8s_apiserver_extra_args",
+    "k8s_apiserver_extra_volumes",
+    "k8s_controller_manager_extra_args",
+    "k8s_controller_manager_extra_volumes",
+    "k8s_scheduler_extra_args",
+    "k8s_scheduler_extra_volumes",
+    "k8s_etcd_extra_args",
+    "k8s_cp_extra_files",
+    "k8s_certificate_validity_period",
+    "kubelet_eviction_hard_nodefs_inodes_free",
+    "kubelet_auto_memory_available_min",
+    "kubelet_auto_memory_available_max",
+    "kubelet_auto_nodefs_available_min",
+    "kubelet_auto_nodefs_available_max",
+    "kubelet_auto_ephemeral_storage_min",
+    "kubelet_auto_ephemeral_storage_max",
+    "kubelet_cpu_manager_policy",
+    "kubelet_cpu_manager_full_pcpus_only",
+    "kubelet_topology_manager_policy",
+    "kubelet_topology_manager_scope",
+    "kubelet_memory_manager_policy",
+    "kubelet_server_tls_bootstrap",
+    "kubelet_ki_cp_extra_cpu",
+    "kubelet_ki_cp_extra_memory"
+  ],
+  "properties": {
+    "ansible_user": {
+      "description": "The user ansible logs in to every node as, the control node included. root\nworks as it always has. Any other user has to exist on every node under this\none name, hold the public key configure-control-node-ssh.sh prints, and be\nallowed sudo without a password - the playbooks run every script through sudo\nand nothing is there to type one. The user ends up with what root has, so this\nis for sites whose policy forbids logging in as root rather than for giving the\ninstaller less. To log in to one node as someone else, set it on that node in\ninventory.yml",
+      "anyOf": [
+        {
+          "pattern": "^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": "root"
+    },
+    "ki_var_root_path": {
+      "format": "path",
+      "type": "string",
+      "default": "/var/lib/k8s-installer",
+      "x-ki-class": "node_rebuild"
+    },
+    "docker_root_path": {
+      "format": "path",
+      "type": "string",
+      "default": "/var/lib/docker",
+      "x-ki-class": "node_rebuild"
+    },
+    "ephemeral_storage_device": {
+      "description": "Block device holding everything kubelet accounts as ephemeral storage, so that\nan image or a pod log can not fill the filesystem the operating system runs on.\nLeave it null to keep those paths on the root filesystem\nTo give a single node a device, set this variable for that node in inventory.yml\n\nThe device is formatted, so it must be one with nothing on it, and it is only\napplied while a node is being provisioned. An existing node is taken out with\nremove-node and added back with add-node\n\nDo not point this at a disk whose contents do not survive a reboot. The name\nsays ephemeral, but /var/lib/kubelet also holds state kubelet expects to find\nagain after a restart. See docs/impl-notes.adoc",
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "node_rebuild"
+    },
+    "kernel_cmdline_extra_args": {
+      "description": "Kernel command line arguments this node boots with, on top of what the\ndistribution puts there. Set per node in inventory.yml, since what a node has\nto boot with follows from what it holds.\n\n  kernel_cmdline_extra_args:\n    - \"default_hugepagesz=1G\"\n    - \"hugepagesz=1G\"\n    - \"hugepages=64\"\n    - \"isolcpus=8-63\"\n\nHugepages reserved at boot, cpus isolated from the scheduler, a driver\nparameter: everything a node has to be told before userspace starts. The iommu\narguments are not here - the vfio-pci component derives those from the devices\nnamed for it and owns them, and naming one here is refused.\n\nEmpty leaves the node alone, and emptying a list that had something in it takes\nwhat it had away. Either way the command line changes at the next boot:\nsetup-boot-config.yml is what reboots a node while it is being built, and a\nnode that was not rebooted is reported at the end of every run until it is",
+      "items": {
+        "pattern": "^[A-Za-z0-9_.-]+(=[^\\s\\\"']+)?$",
+        "type": "string"
+      },
+      "type": "array",
+      "default": [],
+      "x-ki-class": "node_rebuild"
+    },
+    "kernel_modules_extra": {
+      "description": "Kernel modules this node loads, and sysctls it is set to. Set per node in\ninventory.yml, since what a node needs follows from what runs on it.\n\n  kernel_modules_extra:\n    - \"openvswitch\"\n    - \"geneve\"\n  sysctl_extra:\n    net.ipv4.conf.all.rp_filter: 0\n\nWhat this is for is what a cni asks of a node. This installer brings kubernetes\nup and not the network on top of it, so what kubernetes itself needs is already\nwritten by the node setup and what the layer above needs had nowhere to be\ndeclared. Left to be run by hand, those are what a node quietly lacks after it\nhas been rebuilt.\n\nIn force as soon as the playbook has run - the module is loaded and the sysctl\nis set now, and the files are what bring them back at the next boot. So no\nreboot is asked for, unlike the kernel command line.\n\nThe five sysctls and the two modules this installer sets for kubernetes are\nrefused here. /etc/sysctl.d is read in the order its file names sort in and the\nlast value read is the one that holds, and the k8s.conf the node setup writes\nsorts after the 99-ki-sysctl.conf these go into - \"9\" before \"k\" - so a key\nclaimed by both is one where what is written here loses without saying so.\n\nEmptying a list takes the file away, and with it what the node would have\nloaded or set at its next boot. What is already loaded stays loaded and what is\nalready set stays set: a module in use can not be removed, and the value a\nsysctl held before it was set is written down nowhere",
+      "items": {
+        "pattern": "^[A-Za-z0-9_-]+$",
+        "type": "string"
+      },
+      "type": "array",
+      "default": [],
+      "x-ki-class": "node_kernel"
+    },
+    "sysctl_extra": {
+      "patternProperties": {
+        "^[A-Za-z0-9_][A-Za-z0-9_./-]*$": {
+          "anyOf": [
+            {
+              "pattern": "^\\S([^\\n\\r]*\\S)?$",
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        }
+      },
+      "type": "object",
+      "default": {},
+      "x-ki-class": "node_kernel"
+    },
+    "internal_network_subnets": {
+      "items": {
+        "format": "ipv4network",
+        "type": "string"
+      },
+      "type": "array",
+      "default": [
+        "192.168.0.0/24"
+      ],
+      "x-ki-class": "immutable"
+    },
+    "internal_network_extra_zone": {
+      "anyOf": [
+        {
+          "pattern": "^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\\.)+[A-Za-z]{2,}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "examples": [
+        "example.com"
+      ],
+      "x-ki-class": "service"
+    },
+    "internal_network_extra_zone_a_records": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ARecordModel"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "examples": [
+        [
+          {
+            "name": "@",
+            "ip": "172.16.0.254"
+          },
+          {
+            "name": "*",
+            "ip": "172.16.0.254"
+          }
+        ]
+      ],
+      "x-ki-class": "service"
+    },
+    "ki_cp_ha_mode": {
+      "type": "boolean",
+      "default": true,
+      "x-ki-class": "immutable"
+    },
+    "ki_cp_ha_mode_vip": {
+      "anyOf": [
+        {
+          "format": "ipv4",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "service"
+    },
+    "ki_cp_ha_mode_vip_carrier": {
+      "description": "Who tells the network where the vip is.\n\narp is a node announcing the address itself, with gratuitous arp, as soon as\nkeepalived puts it on an interface. That is what a switch listens to and what\na cloud ignores: a vpc delivers to the addresses it has on record for a\nnetwork interface and to nothing else, so on ec2 the vip goes up on a node and\nno packet ever arrives.\n\naws-eni is for ec2. The node keepalived makes MASTER takes the vip onto its\nown network interface as a secondary private address, through the ec2 api,\nand the node it was on loses it in the same call. Everything else - who is\nelected, when the address moves, that a node which came back does not take\nit back - is the keepalived above either way. What it needs from the site is\nin README.adoc: an instance profile allowing ec2:AssignPrivateIpAddresses on\nevery ki cp node, a way to reach the ec2 api, and the vip kept free in the\nsubnet of the ki cp nodes",
+      "default": "arp",
+      "enum": [
+        "arp",
+        "aws-eni"
+      ],
+      "type": "string",
+      "x-ki-class": "service"
+    },
+    "ki_cp_service_timezone": {
+      "description": "The time zone the ki cp services render their timestamps in. Null takes the\nzone of the node each one runs on, which is what makes the log of a container\nread like the journal of the machine it is on.\n\nSet it to an iana name to override that for every ki cp node at once, which is\nwhat a site wants when its machines are on local time and its operators read\neverything in UTC.\n\nOnly the dns server and the load balancer render in it. The registries and\nkeepalived carry no tzdata, and chrony writes its own log in utc whatever it\nis told, so those four are in utc either way. See README.adoc",
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+){0,2}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "service"
+    },
+    "ki_cp_dns_dnssec_validation": {
+      "type": "boolean",
+      "default": true,
+      "x-ki-class": "service"
+    },
+    "ki_cp_dns_server_upstream_servers": {
+      "items": {
+        "format": "ipv4",
+        "type": "string"
+      },
+      "type": "array",
+      "default": [
+        "8.8.8.8",
+        "8.8.4.4"
+      ],
+      "x-ki-class": "service"
+    },
+    "ki_cp_ntp_server_upstream_servers": {
+      "items": {
+        "anyOf": [
+          {
+            "format": "ipv4",
+            "type": "string"
+          },
+          {
+            "pattern": "^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\\.)+[A-Za-z]{2,}$",
+            "type": "string"
+          }
+        ]
+      },
+      "type": "array",
+      "default": [
+        "time1.google.com",
+        "time2.google.com"
+      ],
+      "x-ki-class": "service"
+    },
+    "ki_cp_ntp_server_local_fallback": {
+      "description": "Whether the ntp server of a ki cp node hands out its own clock when none of\nthe upstream servers above can be reached. On, the nodes keep following the\nki cp through an outage of its upstream, agreeing with one another on a time\nthat is only as right as its clock, and go back to the upstream when it\nreturns. Off, a ki cp whose upstream is gone hands out nothing, the nodes\nstop synchronising and the clock check of check-node-state.sh refuses every\nplaybook, which is the choice of a site that would rather stop than run on a\nclock nothing checks. An empty list above is the ki cp clock as the only time\nthere is, whatever this says. See README.adoc",
+      "type": "boolean",
+      "default": true,
+      "x-ki-class": "service"
+    },
+    "k8s_pod_subnet": {
+      "description": "The addresses kubernetes hands out inside the cluster. Fixed while a cluster\nexists: the service subnet decides the address of every service, including the\none kubelet is told is the cluster dns, and the pod subnet is what the cni was\ninstalled around. Moving either is a cluster rebuilt rather than a value\nchanged, and update-cluster.yml refuses it.\n\nThey are here because they can collide with a network that was there first.\nEvery node, every service the workloads reach and every address the cluster\nroutes to has to sit outside both, so a site already using 10.244 or 10.96 for\nsomething needs them somewhere else, and there is nothing this installer could\npick that is right everywhere.\n\nNothing installs a cni here, so whatever does has to be given these same two\nvalues. A cni brought up around a different pod subnet leaves nodes that never\nreach Ready, and the reason does not show up where the symptom does",
+      "format": "ipv4network",
+      "type": "string",
+      "default": "10.244.0.0/16",
+      "x-ki-class": "immutable"
+    },
+    "k8s_service_subnet": {
+      "format": "ipv4network",
+      "type": "string",
+      "default": "10.96.0.0/12",
+      "x-ki-class": "immutable"
+    },
+    "k8s_kube_proxy_enabled": {
+      "description": "Whether kubeadm installs kube-proxy. Set to false for a cni that routes the\nservices itself - cilium with kubeProxyReplacement, calico in ebpf mode - and\nkubeadm makes no kube-proxy DaemonSet, now or at any upgrade after. Nothing\nelse here changes: the cni is still what brings the pod network up, and until\nit does no service address is reachable, kube-proxy or not.\n\nA cni that replaces kube-proxy has to be told where the apiserver is, since\nthe kubernetes service address it would otherwise use is one of the addresses\nit is now in charge of routing. The address to give it is the one every\nkubelet already uses, ki-cp.<internal_network_zone>:<ki_cp_k8s_cp_lb_port>,\nwhich is ki-cp.ki.local:16443 unless constant-vars.yml says otherwise.\n\nFixed while a cluster exists, like the subnets: taking kube-proxy out of a\nrunning cluster is a DaemonSet deleted and the rules it wrote cleaned off\nevery node, and putting it back is an addon phase run again, and neither is\nwhat update-cluster.yml does. It refuses the change instead",
+      "type": "boolean",
+      "default": true,
+      "x-ki-class": "immutable",
+      "x-ki-cluster-wide": true
+    },
+    "k8s_minor_version": {
+      "description": "The kubernetes minor this cluster runs. It has to be one the release carries:\nrelease.yml lists them under k8s_versions, and the patch of that minor is the\nrelease to pin rather than this file to choose.\n\nLeft where it is, a release upgrade keeps the cluster on this minor and moves\nit only to the patch the new release pins. Raised by one, upgrade-cluster.yml\ntakes the cluster up a minor, which is as far as kubeadm goes at a time",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "type": "string",
+      "default": "1.36",
+      "x-ki-class": "cluster_upgrade"
+    },
+    "k8s_apiserver_extra_args": {
+      "description": "Flags and host paths added to the kube-apiserver of every control plane node.\nEmpty leaves it exactly as kubeadm builds it.\n\nWhat this is for is the apiserver options a cluster is required to run with and\nthe installer has no opinion about: an audit policy, an oidc issuer, a feature\ngate, a runtime-config. Without it the only way to set one is to edit the static\npod manifest by hand on each node, which the next kubeadm upgrade overwrites.\n\nThey go into the ClusterConfiguration of the cluster, so kubeadm applies them to\na node that joins later and to every node an upgrade passes through, rather than\nto the nodes that happened to exist when they were set.\n\n  k8s_apiserver_extra_args:\n    - name: audit-policy-file\n      value: /etc/kubernetes/audit/policy.yaml\n    - name: audit-log-path\n      value: /var/log/kubernetes/audit/audit.log\n  k8s_apiserver_extra_volumes:\n    - name: audit\n      hostPath: /etc/kubernetes/audit\n      mountPath: /etc/kubernetes/audit\n      readOnly: true\n    - name: audit-log\n      hostPath: /var/log/kubernetes/audit\n      mountPath: /var/log/kubernetes/audit\n      pathType: DirectoryOrCreate\n\nThe name of an argument carries no dashes. A flag that can be given more than\nonce is listed more than once.\n\nA volume is a host path of the control plane node, and nothing here puts a file\nthere. An argument naming a file that is not on the node is an apiserver that\ndoes not start, and it is a control plane node that does not come back, so put\nthe file on every control plane node first and change these after",
+      "items": {
+        "$ref": "#/$defs/ExtraArgModel"
+      },
+      "type": "array",
+      "default": [],
+      "x-ki-class": "control_plane"
+    },
+    "k8s_apiserver_extra_volumes": {
+      "items": {
+        "$ref": "#/$defs/ExtraVolumeModel"
+      },
+      "type": "array",
+      "default": [],
+      "x-ki-class": "control_plane"
+    },
+    "k8s_controller_manager_extra_args": {
+      "description": "The same for the rest of the control plane, which is configured the same way\nand was not reachable at all.\n\nWhat each one is for, in the order below: the controller manager decides how\nlarge a slice of the pod subnet a node is given (--node-cidr-mask-size), which\nis how many pods a node can hold and is not a thing to discover after the\ncluster is built. The scheduler carries the feature gates a workload may\nrequire. And etcd holds the quota its database is refused writes at\n(--quota-backend-bytes), which defaults to 2GiB and is the wall a long running\ncluster meets. Defragmenting gives back the space already deleted; this raises\nthe wall itself.\n\n  k8s_controller_manager_extra_args:\n    - name: node-cidr-mask-size\n      value: 22\n  k8s_etcd_extra_args:\n    - name: quota-backend-bytes\n      value: 8589934592\n\netcd takes arguments and no volumes. A volume there would be a path mounted\ninto the member holding the state of the cluster, and the one path it reads is\nits data directory, which is not a value this installer lets a node move.\n\nEverything the apiserver block above says applies here too: the name of an\nargument carries no dashes, a file a volume mounts is not put there by this\ninstaller, and a component that will not start is a control plane node that\ndoes not come back",
+      "items": {
+        "$ref": "#/$defs/ExtraArgModel"
+      },
+      "type": "array",
+      "default": [],
+      "x-ki-class": "control_plane"
+    },
+    "k8s_controller_manager_extra_volumes": {
+      "items": {
+        "$ref": "#/$defs/ExtraVolumeModel"
+      },
+      "type": "array",
+      "default": [],
+      "x-ki-class": "control_plane"
+    },
+    "k8s_scheduler_extra_args": {
+      "items": {
+        "$ref": "#/$defs/ExtraArgModel"
+      },
+      "type": "array",
+      "default": [],
+      "x-ki-class": "control_plane"
+    },
+    "k8s_scheduler_extra_volumes": {
+      "items": {
+        "$ref": "#/$defs/ExtraVolumeModel"
+      },
+      "type": "array",
+      "default": [],
+      "x-ki-class": "control_plane"
+    },
+    "k8s_etcd_extra_args": {
+      "items": {
+        "$ref": "#/$defs/ExtraArgModel"
+      },
+      "type": "array",
+      "default": [],
+      "x-ki-class": "control_plane"
+    },
+    "k8s_cp_extra_files": {
+      "description": "Files this installer puts on every control plane node, for the volumes above to\ncarry into the component that declared them. Empty puts nothing anywhere.\n\nA volume declares a path of the node and an argument names a file inside it,\nand until now nothing put the file there. That leaves the two halves of one\ndecision in different places: the argument is cluster wide, so a control plane\nnode joining later is told to read a file nobody has given it, and a component\nthat can not read what it was pointed at does not start.\n\n  k8s_cp_extra_files:\n    - src: audit/policy.yaml\n      dest: /etc/kubernetes/audit/policy.yaml\n      mode: \"0644\"\n\nsrc is a path under ansible/files of this installer, and that is where the file\nitself goes. Relative on purpose: what sits in that directory is carried to\nevery ki cp node with the rest of the ansible directory and kept across a\nrelease upgrade, while a file somewhere else on the control node is known to\nnothing and survives neither.\n\ndest is an absolute path on the node. Owned by root, with the mode given here\nor 0644. The directory it sits in is created, and is left behind when the file\nis removed.\n\nTaking an entry out removes the file it placed the next time a playbook runs.\nOnly paths this installer placed are ever removed - what was put on a node by\nother means is left alone.\n\n*** not for secrets ***\n\nWhat goes in ansible/files is copied to every ki cp node in the clear, so that\nany of them can take over as the control node. That is the right home for an\naudit policy and the wrong one for a key",
+      "items": {
+        "$ref": "#/$defs/CpExtraFileModel"
+      },
+      "type": "array",
+      "default": [],
+      "x-ki-class": "cp_extra_files"
+    },
+    "k8s_certificate_validity_period": {
+      "pattern": "^[0-9]+h$",
+      "type": "string",
+      "default": "26280h",
+      "x-ki-class": "cluster_config"
+    },
+    "ki_preflight_disk_free_min": {
+      "description": "What a node has to have before a playbook starts working on it.\n\nThe disk is checked on every filesystem this installer and kubernetes put\nthings on, and both thresholds have to be met. The absolute one is what an\nupgrade actually needs, since it pushes a whole release of images into the\nregistry of every ki cp node; the percentage is for small disks, where a\nfilesystem can be over the absolute and still be close enough to the eviction\nthresholds of kubelet for pods to start moving.\n\nThe clock is checked because certificates are issued against it and etcd\nmeasures its peers by it, so a node that is wrong about the time fails in ways\nthat name neither. Nothing here sets the clock - the time daemon does - and\nwhat this asks is whether it worked.\n\nA playbook that is taking a cluster apart or rescuing a node that has already\nfailed only reports these. The operator came to fix or remove, and a full disk\nis a reason they came rather than a reason to turn them away.\n\nnull is not asking at all. It is here for the site the question does not fit -\nan air-gapped one with no time source to synchronise to answers the clock at no\nthreshold, and there is nothing it could set instead. Setting the clock one to\nnull drops the synchronised flag with it, since that is the same question",
+      "anyOf": [
+        {
+          "pattern": "^[0-9]+[EPTGMK]i$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": "10Gi",
+      "x-ki-class": "no_action"
+    },
+    "ki_preflight_disk_free_percent_min": {
+      "anyOf": [
+        {
+          "maximum": 100,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": 5,
+      "x-ki-class": "no_action"
+    },
+    "ki_preflight_clock_offset_max_seconds": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": 5,
+      "x-ki-class": "no_action"
+    },
+    "ki_etcd_backup_retention_count": {
+      "description": "How many etcd snapshots each k8s cp node keeps. The oldest over this are\nremoved as each new one is taken, because nothing else removes them and they\nsit on the root filesystem of a control plane node",
+      "default": 5,
+      "exclusiveMinimum": 0,
+      "type": "integer",
+      "x-ki-class": "no_action"
+    },
+    "kubelet_system_reserved_cpu": {
+      "description": "Kubelet resource reservations\nLeave a value null to calculate it from the actual cpu, memory and disk capacity of the node.\nSee scripts/preflight/create-kubelet-reservations.py for the calculation\nTo give a single node different values, override only that variable in inventory.yml",
+      "anyOf": [
+        {
+          "pattern": "^([0-9]+m|[0-9]+(\\.[0-9]+)?)$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_system_reserved_memory": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9]+[EPTGMK]i$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_system_reserved_ephemeral_storage": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9]+[EPTGMK]i$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_system_reserved_pid": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_kube_reserved_cpu": {
+      "anyOf": [
+        {
+          "pattern": "^([0-9]+m|[0-9]+(\\.[0-9]+)?)$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_kube_reserved_memory": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9]+[EPTGMK]i$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_kube_reserved_ephemeral_storage": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9]+[EPTGMK]i$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_kube_reserved_pid": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_eviction_hard_memory_available": {
+      "anyOf": [
+        {
+          "pattern": "^([0-9]+(\\.[0-9]+)?%|[0-9]+[EPTGMK]i)$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_eviction_hard_nodefs_available": {
+      "anyOf": [
+        {
+          "pattern": "^([0-9]+(\\.[0-9]+)?%|[0-9]+[EPTGMK]i)$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_eviction_hard_imagefs_available": {
+      "anyOf": [
+        {
+          "pattern": "^([0-9]+(\\.[0-9]+)?%|[0-9]+[EPTGMK]i)$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_eviction_hard_nodefs_inodes_free": {
+      "pattern": "^([0-9]+(\\.[0-9]+)?%|[0-9]+[EPTGMK]i)$",
+      "type": "string",
+      "default": "5%",
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_auto_memory_available_min": {
+      "description": "Bounds applied to the calculated values.\nA lower bound is ignored when it would take an excessive share of a small node",
+      "pattern": "^[0-9]+[EPTGMK]i$",
+      "type": "string",
+      "default": "500Mi",
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_auto_memory_available_max": {
+      "pattern": "^[0-9]+[EPTGMK]i$",
+      "type": "string",
+      "default": "4Gi",
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_auto_nodefs_available_min": {
+      "pattern": "^[0-9]+[EPTGMK]i$",
+      "type": "string",
+      "default": "15Gi",
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_auto_nodefs_available_max": {
+      "pattern": "^[0-9]+[EPTGMK]i$",
+      "type": "string",
+      "default": "50Gi",
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_auto_ephemeral_storage_min": {
+      "pattern": "^[0-9]+[EPTGMK]i$",
+      "type": "string",
+      "default": "5Gi",
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_auto_ephemeral_storage_max": {
+      "pattern": "^[0-9]+[EPTGMK]i$",
+      "type": "string",
+      "default": "30Gi",
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_cpu_manager_policy": {
+      "description": "How kubelet hands out the cpus of a node. Set per node in inventory.yml:\nwhether a node is pinned follows from what it holds, and a node running gpu\nvirtual machines wants it while the one running the control plane does not.\n\nnone, the default, means what it has always meant - a container is given cpu\ntime and the kernel moves its threads between cores. A workload that needs a\ncore to itself, a virtual machine with pinned vcpus or a latency sensitive\nserver, can not be given one that way, and neither can it be lined up with the\nnuma node its gpu sits on.\n\nstatic gives whole cpus to containers that ask for whole cpus in a Guaranteed\npod, and is what kubevirt requires for dedicatedCpuPlacement. It costs density:\na cpu given out is a cpu nothing else runs on, idle or not.\n\nChanging it is not a value being rewritten. kubelet checkpoints the policy it\nlast ran and refuses to start when the new configuration disagrees, saying to\ndrain the node and delete the file, so update-cluster.yml drains the node,\ntakes the checkpoint away and brings kubelet back, one node at a time",
+      "enum": [
+        "none",
+        "static"
+      ],
+      "type": "string",
+      "default": "none",
+      "x-ki-class": "kubelet_policy"
+    },
+    "kubelet_cpu_manager_full_pcpus_only": {
+      "description": "Whether an exclusive allocation is a whole physical core rather than one\nhardware thread. Read only while the policy above is static.\n\nLeft false, a node hands out logical cpus, so the two threads of one core can\ngo to two different containers - the model a public cloud sells as a vcpu.\nTurned on, the threads of a core go together, which halves how many exclusive\ncpus a node has and takes the neighbour off the other thread of every core.\n\nA pod asking for an odd number of cpus is then refused rather than given a\nthread too many, so turning this on can leave Pending what used to run",
+      "type": "boolean",
+      "default": false,
+      "x-ki-class": "kubelet_policy"
+    },
+    "kubelet_topology_manager_policy": {
+      "description": "Whether kubelet lines the cpus, the memory and the devices of a workload up on\none numa node, and how strictly.\n\nWhat this is for is a device that sits on a numa node - a gpu that was passed\nthrough, a fabric nic. A container given cpus on the other side of the machine\nreaches its own device across the interconnect, and nothing reports that as\nanything but a workload that runs slower than it should.\n\nsingle-numa-node refuses to admit what it can not line up, which is the point:\nthe alternative is a pod that runs and quietly performs worse. The cpu part of\nit needs the policy above to be static to have anything to line up",
+      "enum": [
+        "none",
+        "best-effort",
+        "restricted",
+        "single-numa-node"
+      ],
+      "type": "string",
+      "default": "none",
+      "x-ki-class": "kubelet_policy"
+    },
+    "kubelet_topology_manager_scope": {
+      "description": "Whether the alignment above is decided per container or for the pod as a whole.\npod is what a virtual machine wants, since its vcpus and its device are one\nworkload rather than several",
+      "enum": [
+        "container",
+        "pod"
+      ],
+      "type": "string",
+      "default": "container",
+      "x-ki-class": "kubelet_policy"
+    },
+    "kubelet_memory_manager_policy": {
+      "description": "Whether kubelet counts the memory and the hugepages of a node per numa node\nand hands them out that way, so that the topology manager above has a memory\nhint to line up with the cpus and the devices.\n\nnone, the default, leaves memory where it has always been - one pool, placed by\nthe kernel. static counts the memory and the hugepages of every numa node,\ngives a Guaranteed container memory from the numa node its cpus and its device\nwere lined up with, and refuses what it can not place. It is what kubevirt\nneeds for a guest to see the numa topology of the host (guestMappingPassthrough),\nwhich in turn is what a virtual machine with a passed through gpu wants: the\nguest memory on hugepages of the numa node the gpu sits on.\n\nOnly the memory the node keeps for itself is decided here. kubelet asks that the\nmemory named per numa node add up to exactly what systemReserved, kubeReserved\nand the memory.available eviction threshold reserve, so\ncreate-kubelet-reservations.py takes the three it already calculated and\nspreads their sum over the numa nodes of the machine. The hugepages themselves\nare the kernel's to allocate and the site's to size: declared in\nkernel_cmdline_extra_args, in force at a boot, and counted by\ncheck-kernel-args.sh against what the kernel actually took.\n\nRead with the topology manager. With kubelet_topology_manager_policy at none\nthere is nothing for the memory hint to be lined up with, so the pair is refused.\nAnd it costs what the cpu policy costs: kubelet checkpoints this too, in\n/var/lib/kubelet/memory_manager_state, and refuses to start when the\nconfiguration disagrees with the checkpoint - so changing it is the same drain,\nthe same checkpoint taken away and the same restart, one node at a time. A\nmemory reservation changed on a node that runs static goes the same way, since\nthe checkpoint records what was reserved",
+      "enum": [
+        "none",
+        "static"
+      ],
+      "type": "string",
+      "default": "none",
+      "x-ki-class": "kubelet_policy"
+    },
+    "kubelet_reserved_system_cpus": {
+      "description": "The cpus kept for the system and for kubelet, named rather than counted.\n\nLeft null, kubelet reserves as much cpu as the reservations below ask for and\npicks which cpus itself. Naming them pins the system to a known set - typically\nthe cpus of one numa node - and leaves the rest whole for exclusive allocation.\n\nkubelet overwrites the cpu it keeps for the system with the count of the set\nnamed here, so setting this and kubelet_system_reserved_cpu on one node means\none of the two does nothing and the playbooks refuse it. The reservation this\ninstaller calculates is overwritten the same way and is left where it is",
+      "anyOf": [
+        {
+          "pattern": "^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet_policy"
+    },
+    "kubelet_server_tls_bootstrap": {
+      "description": "Whether kubelet asks the cluster for the certificate it serves on, rather than\nsigning one itself.\n\nLeft off, every kubelet serves a certificate it made up, so everything that\nconnects to one either skips verification or fails. That is what\n--kubelet-insecure-tls is for in metrics-server, and it is the same hole for\n\"kubectl top\", \"kubectl logs\" and anything else that reaches a node.\n\nTurned on, kubelet requests one through a certificate signing request at\nstartup and at every rotation.\n\n*** nothing approves those requests, and the node is down until something does ***\n\nkube-controller-manager signs kubelet-serving requests and deliberately does\nnot approve them: a node asks for the names and addresses it will be reached\nat, and believing that without checking is how one node gets a certificate for\nanother.\n\nWhile it waits kubelet does not fall back to one it signed itself. It has\nnothing to serve and refuses every handshake on 10250 - \"no serving\ncertificate available for the kubelet\" - so kubectl logs, kubectl exec,\nkubectl top and metrics-server all stop for that node, and\n--kubelet-insecure-tls buys nothing because there is no certificate to skip\nverifying. So applying this stops at the first node the cluster does not\nanswer for, rather than walking the rest of them down behind it: one node is\nwaiting, the others are untouched, and the run says so.\n\nSo this is turned on with the approval already arranged, not ahead of it -\nan approver that checks the request against what the cluster knows about the\nnode, or a person standing by with \"kubectl certificate approve\". The requests\ncome back at every rotation, so approving by hand is a standing chore rather\nthan a step. check-kubelet-serving-cert.yml reports the nodes that are not\nserving an issued certificate.\n\nFor the apiserver to gain anything from it, it has to be told which ca to\ntrust: k8s_apiserver_extra_args with kubelet-certificate-authority pointing at\n/etc/kubernetes/pki/ca.crt. Without that the apiserver goes on not verifying,\nand what this buys is only what other clients verify, which\ncheck-kubelet-serving-cert.yml says when the argument is not there.\n\nCluster wide on purpose, in this file rather than per node, and the preflight\nrefuses it on a node rather than leaving that to be read here. A cluster where\nsome kubelets are verifiable and others are not is one where every client has\nto know which is which, and no client is written that way",
+      "type": "boolean",
+      "default": false,
+      "x-ki-class": "kubelet",
+      "x-ki-cluster-wide": true
+    },
+    "kubelet_max_pods": {
+      "description": "The most pods kubelet accepts on a node. Left null, kubernetes decides (110).\nA node running many small pods reaches it; a node whose pods are virtual\nmachines with large cpu and memory never gets near it",
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_ki_cp_extra_cpu": {
+      "description": "Added to systemReserved on nodes of the ki_cp_node group.\nThose nodes run keepalived, dns server, ntp server, k8s cp lb and k8s registry\nwith docker, outside of kubernetes, so kubelet does not account for them",
+      "pattern": "^([0-9]+m|[0-9]+(\\.[0-9]+)?)$",
+      "type": "string",
+      "default": "500m",
+      "x-ki-class": "kubelet"
+    },
+    "kubelet_ki_cp_extra_memory": {
+      "pattern": "^[0-9]+[EPTGMK]i$",
+      "type": "string",
+      "default": "1Gi",
+      "x-ki-class": "kubelet"
+    }
+  },
+  "patternProperties": {
+    "^ansible_": {}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ARecordModel": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "ip": {
+          "format": "ipv4",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "ip"
+      ],
+      "type": "object"
+    },
+    "CpExtraFileModel": {
+      "properties": {
+        "src": {
+          "format": "path",
+          "type": "string"
+        },
+        "dest": {
+          "format": "path",
+          "type": "string"
+        },
+        "mode": {
+          "default": "0644",
+          "pattern": "^0[0-7]{3}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "src",
+        "dest"
+      ],
+      "type": "object"
+    },
+    "ExtraArgModel": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "type": "object"
+    },
+    "ExtraVolumeModel": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "hostPath": {
+          "format": "path",
+          "type": "string"
+        },
+        "mountPath": {
+          "format": "path",
+          "type": "string"
+        },
+        "readOnly": {
+          "default": false,
+          "type": "boolean"
+        },
+        "pathType": {
+          "anyOf": [
+            {
+              "enum": [
+                "DirectoryOrCreate",
+                "Directory",
+                "FileOrCreate",
+                "File"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name",
+        "hostPath",
+        "mountPath"
+      ],
+      "type": "object"
+    }
+  }
+}
