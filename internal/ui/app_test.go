@@ -204,3 +204,24 @@ func TestKoreanLocaleFrameFits(t *testing.T) {
 		press(t, a, "ctrl+n")
 	}
 }
+
+// Every line a screen draws fits the width the app gave it, on every screen and
+// window size; a longer line wraps inside the frame and breaks the layout.
+// Below 80 columns the fixed-width tables of screens 1, 2 and 4 do not fit yet.
+func TestScreensFitTheirWidth(t *testing.T) {
+	for _, w := range []int{80, 120, 200} {
+		a, _, _ := newAppFromMain(t)
+		a.Update(tea.WindowSizeMsg{Width: w, Height: 40})
+		_, contentW, _ := a.dims()
+		for i := 0; i < 7; i++ {
+			sc := a.screenList[a.current]
+			for _, line := range strings.Split(sc.View(), "\n") {
+				if lw := lipgloss.Width(line); lw > contentW-2 {
+					t.Errorf("window %d, screen %d: line of %d columns, room for %d: %q", w, a.current+1, lw, contentW-2, line)
+					break
+				}
+			}
+			press(t, a, "ctrl+n")
+		}
+	}
+}

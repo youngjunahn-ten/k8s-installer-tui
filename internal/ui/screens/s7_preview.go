@@ -267,7 +267,7 @@ func (s *S7Preview) View() string {
 		}
 	}
 	if len(s.notSaved) > 0 {
-		b.WriteString(styles.StyleMuted.Render("참고: 지금 vars.yml에 없는 키라 저장하지 않습니다(이 설치기 버전은 읽지 않음): "+
+		b.WriteString(styles.StyleMuted.Copy().Width(s.width).Render("참고: 지금 vars.yml에 없는 키라 저장하지 않습니다(이 설치기 버전은 읽지 않음): "+
 			strings.Join(s.notSaved, ", ")) + "\n")
 	}
 

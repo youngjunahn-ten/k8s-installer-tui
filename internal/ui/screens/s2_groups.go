@@ -189,11 +189,12 @@ func (s *S2Groups) View() string {
 	var b strings.Builder
 	b.WriteString(styles.StyleTitle.Render("그룹 할당") + "\n")
 	b.WriteString(styles.StyleMuted.Render("각 노드의 역할을 선택합니다.  ←/→: 열 이동  Space: 선택") + "\n")
-	b.WriteString(styles.StyleMuted.Render("Control: 설치를 실행하는 노드(control_node_ih). ki_cp_node 중 하나여야 합니다") + "\n\n")
+	b.WriteString(styles.StyleMuted.Copy().Width(s.width).Render("Control: 설치를 실행하는 노드(control_node_ih). ki_cp_node 중 하나여야 합니다") + "\n\n")
 
 	// 5 display columns: ki_cp | Control | Master | GPU Worker | CPU Worker(derived)
 	colLabels := []string{"ki_cp_node", "Control", "Master Node", "GPU Worker", "CPU Worker"}
-	colW := []int{14, 12, 10, 14, 12, 14}
+	// 66 columns in all, as before the Control column: the room an 80 column window gives
+	colW := []int{11, 12, 9, 12, 11, 11}
 
 	header := lipgloss.NewStyle().Width(colW[0]).Bold(true).Render("노드")
 	for i, l := range colLabels {

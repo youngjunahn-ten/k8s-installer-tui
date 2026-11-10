@@ -48,8 +48,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.width = msg.Width
 		a.height = msg.Height
 		_, contentW, contentH := a.dims()
+		// The inner panel is Width(contentW) with Padding(0, 1), and lipgloss counts
+		// the padding inside that width, so a screen has contentW-2 columns of text.
+		// Given contentW, a full-width line (the separator of screen 2, the scroll
+		// bar of screen 7) ran 2 columns over and wrapped onto a line of its own.
 		for _, sc := range a.screenList {
-			sc.SetSize(contentW, contentH)
+			sc.SetSize(contentW-2, contentH)
 		}
 		return a, nil
 
