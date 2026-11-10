@@ -137,6 +137,8 @@ func TestWizardFromMainFilesToSave(t *testing.T) {
 	}
 	if v := a.View(); !strings.Contains(v, "검증 통과") {
 		t.Fatalf("preview reports errors:\n%s", v)
+	} else if !strings.Contains(v, "k8s_load_balancers") || !strings.Contains(v, "저장하지 않습니다") {
+		t.Errorf("preview does not say which keys main's vars.yml lacks:\n%s", v)
 	}
 	press(t, a, "s")
 	if v := a.View(); !strings.Contains(v, "저장 완료") || !strings.Contains(v, ".bak.") {
@@ -186,6 +188,7 @@ func TestKoreanLocaleFrameFits(t *testing.T) {
 	saved := runewidth.DefaultCondition.EastAsianWidth
 	defer func() { runewidth.DefaultCondition.EastAsianWidth = saved }()
 	runewidth.DefaultCondition.EastAsianWidth = true
+	t.Setenv("RUNEWIDTH_EASTASIAN", "") // the person did not ask for wide
 	useNarrowAmbiguousWidth()
 
 	a, _, _ := newAppFromMain(t)

@@ -100,6 +100,22 @@ func TestVarsKeepsWhatTheTUIDoesNotOwn(t *testing.T) {
 	if strings.Contains(string(out), "ki_cp_ha_mode_vip: null") {
 		t.Error("old ki_cp_ha_mode_vip is still there")
 	}
+
+	// main has no load balancer / gateway / cert mode keys, and its
+	// validate-hostvars.py rejects a vars.yml key it does not classify, so the
+	// TUI must not add them; it reports them instead.
+	notSaved := []string{"containerd_root_path", "k8s_load_balancers", "k8s_gateways", "k8s_default_ingress_class", "ki_cert_mode"}
+	for _, k := range notSaved {
+		if strings.Contains(string(out), "\n"+k+":") {
+			t.Errorf("%s added to a vars.yml that does not have it", k)
+		}
+	}
+	if got := VarsNotSaved(varsPath, s); strings.Join(got, ",") != strings.Join(notSaved, ",") {
+		t.Errorf("VarsNotSaved = %v, want %v", got, notSaved)
+	}
+	if len(splitLines(out)) != len(lines) {
+		t.Errorf("line count %d, want %d (one value changed in place)", len(splitLines(out)), len(lines))
+	}
 }
 
 func TestSaveTwiceIsStableAndKeepsBothBackups(t *testing.T) {

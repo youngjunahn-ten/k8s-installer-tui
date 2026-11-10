@@ -31,6 +31,7 @@ type S7Preview struct {
 	saved            bool
 	saveErr          string
 	backups          []string // backup files written by the last save
+	notSaved         []string // keys the existing vars.yml does not have (fileio.VarsNotSaved)
 	appState         *state.AppState
 	inventoryPath    string
 	varsPath         string
@@ -80,6 +81,7 @@ func (s *S7Preview) SyncFromState(st *state.AppState) {
 	} else {
 		s.varsContent = vars
 	}
+	s.notSaved = fileio.VarsNotSaved(s.varsPath, st)
 
 	s.activeTab = 0
 	s.focusIdx = 0
@@ -263,6 +265,10 @@ func (s *S7Preview) View() string {
 		for _, e := range s.errors {
 			b.WriteString(styles.StyleError.Render("  • "+e.Error()) + "\n")
 		}
+	}
+	if len(s.notSaved) > 0 {
+		b.WriteString(styles.StyleMuted.Render("참고: 지금 vars.yml에 없는 키라 저장하지 않습니다(이 설치기 버전은 읽지 않음): "+
+			strings.Join(s.notSaved, ", ")) + "\n")
 	}
 
 	if s.saveErr != "" {

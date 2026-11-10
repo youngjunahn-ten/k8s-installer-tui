@@ -94,8 +94,12 @@ inventory.yml      ←  새 내용으로 저장 (임시 파일에 쓴 뒤 바꿔
 저장은 TUI가 다루는 값만 바꿉니다. TUI 화면에 없는 키(`kubelet_*`, `sysctl_extra` 등),
 호스트별 다른 변수, 다른 그룹(`broken_node` 등)과 주석은 그대로 남습니다.
 
-- `vars.yml`: TUI가 다루는 최상위 키의 줄만 바꾸고 나머지 줄은 한 글자도 바꾸지 않습니다. 파일에 없던 키는 끝에 붙입니다.
-- `inventory.yml`: 내용과 주석은 남지만, YAML 라이브러리 특성상 빈 줄이 빠지고 일부 주석의 들여쓰기가 바뀔 수 있습니다.
+- `vars.yml`: TUI가 다루는 최상위 키의 줄만 바꾸고 나머지 줄은 한 글자도 바꾸지 않습니다.
+  - **파일에 없는 키는 새로 넣지 않습니다.** `vars.yml`은 함께 받은 설치기 버전의 것이고, k8s-installer는 모르는 변수가 있으면 거부합니다(`validate-hostvars.py`: "is in no class of ki_var_classes"). 예를 들어 지금 k8s-installer main의 `vars.yml`에는 `k8s_load_balancers`, `k8s_gateways`, `k8s_default_ingress_class`, `ki_cert_mode`, `containerd_root_path`가 없으므로 이 값들은 저장하지 않고, 7단계 화면에 그 목록을 보여 줍니다.
+  - 주석으로 자리만 잡아 둔 키(`#internal_network_extra_zone: ...`)는 그 자리에 실제 값으로 바꿔 넣습니다.
+  - 끄는 값(AIPub 끔 등)은 지우지 않고 주석으로 바꿔 두므로, 다시 켜면 같은 자리에 돌아옵니다.
+- `inventory.yml`: 내용과 주석은 남지만, YAML 라이브러리 특성상 빈 줄이 빠지고 일부 주석의 들여쓰기가 바뀔 수 있습니다. 1단계에서 지운 노드는 `broken_node` 같은 다른 그룹에서도 빠집니다.
+- `vars.yml`이 없거나 비어 있으면 TUI가 아는 키로만 새로 만듭니다. 이 파일만으로는 지금 k8s-installer main이 요구하는 키(`k8s_pod_subnet` 등)가 모자라므로, **설치기와 함께 배포된 `vars.yml`이 있는 곳에서 실행**하세요.
 
 ## 키 조작
 

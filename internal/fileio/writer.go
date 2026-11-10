@@ -50,13 +50,25 @@ func BuildInventory(path string, s *state.AppState) ([]byte, error) {
 
 // BuildVars returns what WriteVars would write to path.
 func BuildVars(path string, s *state.AppState) ([]byte, error) {
+	b, _, err := buildVars(path, s)
+	return b, err
+}
+
+// VarsNotSaved lists the keys of the screens that saving leaves out because the
+// existing vars.yml at path does not have them (see mergeVars).
+func VarsNotSaved(path string, s *state.AppState) []string {
+	_, skipped, _ := buildVars(path, s)
+	return skipped
+}
+
+func buildVars(path string, s *state.AppState) ([]byte, []string, error) {
 	rendered, err := renderVars(s)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	existing, err := readIfExists(path)
 	if err != nil || existing == nil {
-		return rendered, err
+		return rendered, nil, err
 	}
 	return mergeVars(existing, rendered)
 }

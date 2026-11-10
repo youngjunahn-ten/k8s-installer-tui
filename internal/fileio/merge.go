@@ -3,6 +3,7 @@ package fileio
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -87,20 +88,27 @@ func parseMapping(b []byte) (*yaml.Node, error) {
 }
 
 // mergeVars writes the TUI's keys into an existing vars.yml in place. Each owned
-// key's lines are replaced by the rendered ones, an owned key the TUI no longer
-// writes is removed, and a rendered key the file lacks is added at the end with
-// the comments that lead up to it. Lines of any other key are left untouched.
-func mergeVars(existing, rendered []byte) ([]byte, error) {
+// key's lines are replaced by the rendered ones and an owned key the TUI no longer
+// writes is commented out (or replaced by the rendered placeholder comment when
+// there is one). Lines of any other key are left untouched.
+//
+// A rendered key the file does not have is not added: the vars.yml belongs to
+// the installer it came with, and k8s-installer rejects a variable it does not
+// know (validate-hostvars.py: "is in no class of ki_var_classes"). The one
+// exception is a key the file carries commented out ("#key: ..." in column 0,
+// as main ships internal_network_extra_zone): that placeholder is replaced in
+// place. The keys left out are returned so the screen can say so.
+func mergeVars(existing, rendered []byte) ([]byte, []string, error) {
 	eroot, err := parseMapping(existing)
 	if err != nil {
-		return nil, fmt.Errorf("parse existing vars.yml: %w", err)
+		return nil, nil, fmt.Errorf("parse existing vars.yml: %w", err)
 	}
 	if eroot == nil {
-		return rendered, nil
+		return rendered, nil, nil
 	}
 	froot, err := parseMapping(rendered)
 	if err != nil || froot == nil {
-		return nil, fmt.Errorf("parse rendered vars.yml: %v", err)
+		return nil, nil, fmt.Errorf("parse rendered vars.yml: %v", err)
 	}
 
 	elines := splitLines(existing)
@@ -116,35 +124,71 @@ func mergeVars(existing, rendered []byte) ([]byte, error) {
 		owned[k] = true
 	}
 
-	var out []string
-	cur := 0
+	type edit struct {
+		start, end int // inclusive line range of elines to replace
+		lines      []string
+	}
+	var edits []edit
 	for _, key := range eorder {
-		sp := espans[key]
 		if !owned[key] {
 			continue
 		}
-		out = append(out, elines[cur:sp.start]...)
+		sp := espans[key]
 		if fsp, ok := fspans[key]; ok {
-			out = append(out, flines[fsp.start:fsp.end+1]...)
+			edits = append(edits, edit{sp.start, sp.end, flines[fsp.start : fsp.end+1]})
+		} else if ps, pe, ok := commentedKey(flines, key); ok {
+			edits = append(edits, edit{sp.start, sp.end, flines[ps : pe+1]})
+		} else {
+			// Turned off (AIPub off): comment the lines out rather than drop them,
+			// so turning it back on finds the key in the file again.
+			var commented []string
+			for _, l := range elines[sp.start : sp.end+1] {
+				commented = append(commented, "#"+l)
+			}
+			edits = append(edits, edit{sp.start, sp.end, commented})
 		}
-		cur = sp.end + 1
 	}
-	out = append(out, elines[cur:]...)
-
+	var skipped []string
 	for _, key := range forder {
 		if _, ok := espans[key]; ok {
 			continue
 		}
-		fsp := fspans[key]
-		lead := flines[fsp.before:fsp.start]
-		if len(out) > 0 && strings.TrimSpace(out[len(out)-1]) != "" && (len(lead) == 0 || strings.TrimSpace(lead[0]) != "") {
-			out = append(out, "")
+		if ps, pe, ok := commentedKey(elines, key); ok {
+			fsp := fspans[key]
+			edits = append(edits, edit{ps, pe, flines[fsp.start : fsp.end+1]})
+			continue
 		}
-		out = append(out, lead...)
-		out = append(out, flines[fsp.start:fsp.end+1]...)
+		skipped = append(skipped, key)
 	}
 
-	return []byte(strings.Join(out, "\n") + "\n"), nil
+	sort.Slice(edits, func(i, j int) bool { return edits[i].start > edits[j].start })
+	out := append([]string(nil), elines...)
+	for _, e := range edits {
+		tail := append(append([]string(nil), e.lines...), out[e.end+1:]...)
+		out = append(out[:e.start], tail...)
+	}
+	return []byte(strings.Join(out, "\n") + "\n"), skipped, nil
+}
+
+// commentedKey finds a key written out but commented, in column 0, the way a
+// vars.yml offers an optional setting:
+//
+//	#internal_network_extra_zone_a_records:
+//	#  - name: "@"
+//
+// It returns the lines of the "#key:" line and the "#  ..." lines under it.
+func commentedKey(lines []string, key string) (int, int, bool) {
+	for i, l := range lines {
+		if !strings.HasPrefix(l, "#"+key+":") {
+			continue
+		}
+		end := i
+		for end+1 < len(lines) && (strings.HasPrefix(lines[end+1], "#  ") || strings.HasPrefix(lines[end+1], "#\t")) {
+			end++
+		}
+		return i, end, true
+	}
+	return 0, 0, false
 }
 
 // mergeInventory writes the TUI's part of the inventory into an existing one:

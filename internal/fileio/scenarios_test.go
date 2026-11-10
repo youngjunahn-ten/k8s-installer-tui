@@ -108,8 +108,11 @@ func TestArchiveStyleVarsAIPubOnOff(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := string(out)
-	if strings.Contains(got, "aipub_") {
-		t.Errorf("aipub keys left with AIPub off:\n%s", got)
+	if m := mustParse(t, out); m["aipub_ingress_zone"] != nil || m["aipub_cp_nodes"] != nil {
+		t.Errorf("aipub keys still set with AIPub off:\n%s", got)
+	}
+	if !strings.Contains(got, "#aipub_ingress_zone:") {
+		t.Errorf("aipub keys should stay as comments:\n%s", got)
 	}
 	for _, want := range []string{"# site note kept by hand\n", `my_site_key: "keep me"` + "\n"} {
 		if !strings.Contains(got, want) {
@@ -156,6 +159,14 @@ func TestInternalDNSOnOff(t *testing.T) {
 	if len(recs) != 2 {
 		t.Fatalf("a records %v", recs)
 	}
+	// main's commented placeholder is replaced where it is, not left beside a
+	// copy added somewhere else.
+	if n := strings.Count(string(out), "internal_network_extra_zone:"); n != 1 {
+		t.Errorf("internal_network_extra_zone appears %d times:\n%s", n, out)
+	}
+	if strings.Index(string(out), "internal_network_extra_zone:") > strings.Index(string(out), "\nki_cp_ha_mode:") {
+		t.Error("the zone was not put where main's placeholder was (before ki_cp_ha_mode)")
+	}
 
 	// Off again: the real keys go away.
 	if err := os.WriteFile(varsPath, out, 0644); err != nil {
@@ -169,6 +180,9 @@ func TestInternalDNSOnOff(t *testing.T) {
 	m = mustParse(t, out)
 	if _, ok := m["internal_network_extra_zone"]; ok {
 		t.Error("internal_network_extra_zone left with the DNS server off")
+	}
+	if !strings.Contains(string(out), "#internal_network_extra_zone:") {
+		t.Error("turning the DNS server off should leave the commented placeholder")
 	}
 	if _, ok := m["kubelet_max_pods"]; !ok {
 		t.Error("kubelet_max_pods lost")
